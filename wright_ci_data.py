@@ -12,7 +12,7 @@
 
 import numpy as np
 
-ci_data = {
+wright_ci_data = {
     "CO2:CO2": {
         "pi_Omega_11": {
             "temps": np.array([300, 500, 600, 1000, 2000, 4000, 5000, 6000, 8000, 10000, 15000, 20000]),
