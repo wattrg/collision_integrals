@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hcb_ci_data import hcb_ci_data
 from wright_ci_data import wright_ci_data
-
+from abc import ABC, abstractmethod
 
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
     """
@@ -40,11 +40,9 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
 
 
 
-class CollisionIntegralModel:
+class CollisionIntegralModel(ABC):
 
-    def __init__(self, *args, **kwargs):
-        pass
-
+    @abstractmethod
     def eval(self, temp):
         pass
 
@@ -93,16 +91,19 @@ class CICurveFitModel(CollisionIntegralModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, temps, cis):
-        print("Initialising curve fit model")
         self._temps = temps
         self._cis = cis
         self._evaluate_coeffs()
 
+    @abstractmethod
     def _curve_fit_form(self, temp, a, b, c, d):
         pass
 
     def _evaluate_coeffs(self):
-        a, b, c, d, _ = curve_fit(self._curve_fit_form, self._temps, self._cis)
+        (a, b, c, d), _ = curve_fit(self._curve_fit_form,
+                                    self._temps,
+                                    self._cis,
+                                    [-0.01, 0.3, -2.5, 11])
         self._a = a
         self._b = b
         self._c = c
@@ -114,16 +115,15 @@ class CICurveFitModel(CollisionIntegralModel):
     def __repr__(self):
         return f"[a={self._a}, b={self._b}, c={self._c}, d={self._d}]"
 
-class CICurveFitPiOmega(CollisionIntegralModel):
+class CICurveFitPiOmega(CICurveFitModel):
     """ Curve fit of pi * Omega """
 
     def _curve_fit_form(self, temp, a, b, c, d):
-        return np.pi * omega_curve_fit(temp, a, b, c, d)
+        return omega_curve_fit(temp, a, b, c, d) / np.pi
 
 
-class CICurveFitOmega(CollisionIntegralModel):
+class CICurveFitOmega(CICurveFitModel):
     """ Curve fitted collision integral """
-
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d)
@@ -142,7 +142,7 @@ class CICurveFit:
         cis = kwargs["cis"]
         if curve_fit_type not in self.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return self.CURVE_FIT_TYPES[curve_fit_type](temps, cis)
+        return self.CURVE_FIT_TYPES[curve_fit_type](temps=temps, cis=cis)
 
 
 class CICurveFitCollection:
@@ -151,20 +151,22 @@ class CICurveFitCollection:
     """
 
     def __init__(self, **kwargs):
-        self.data = kwargs["ci_table"]
-        self.curve_fit_type = kwargs["curve_fit_type"]
-        self.ci_coeffs = {}
-        for pair, pair_ci in self.data.items():
-            self.ci_coeffs[pair] = {}
+        self._data = kwargs["ci_table"]
+        self._curve_fit_type = kwargs["curve_fit_type"]
+        self._ci_coeffs = {}
+        for pair, pair_ci in self._data.items():
+            self._ci_coeffs[pair] = {}
             for ii in ["11", "22"]:
-                self.ci_coeffs[pair][f"pi_Omega_{ii}"] = CICurveFit().get_curve_fit(
-                    curve_fit_type=self.curve_fit_type,
+                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = CICurveFit().get_curve_fit(
+                    curve_fit_type=self._curve_fit_type,
                     temps=pair_ci[f"pi_Omega_{ii}"]["temps"],
-                    cis=pair_ci[f"pi_Omega_{ii}"]["temps"]
+                    cis=pair_ci[f"pi_Omega_{ii}"]["cis"]
                 )
 
-    def get_coeffs(self):
-        return self.ci_coeffs
+    def get_coeffs(self, pair=None):
+        if pair:
+            return self._ci_coeffs[pair]
+        return self._ci_coeffs
 
 
 class CollisionIntegral:
