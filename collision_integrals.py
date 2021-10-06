@@ -48,7 +48,7 @@ class CollisionIntegralModel(ABC):
 
 def lennard_jones(radius, sigma, epsilon):
     """ compute the Lennard Jones potential at some separation """
-    pass
+    return 4 * epsilon * ((sigma/radius)**12 - (sigma/radius)**6)
 
 
 class NumericCollisionIntegral(CollisionIntegralModel):
@@ -75,27 +75,35 @@ class NumericCollisionIntegral(CollisionIntegralModel):
 
     def _r_m_func(self, radius, impact_param, rel_vel):
         gamma_2 = 0.5 * self._mu * rel_vel**2
-        tmp = -(radius**2/impact_param)
-        tmp *= np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
-        return tmp
+        # tmp = -radius**2/impact_param
+        # tmp *= np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
+        return self._potential(radius)/gamma_2 + (impact_param/radius)**2 - 1
 
     def _calc_r_m(self, impact_param, rel_vel):
         """ Compute the value of r_m for computing the deflection angle """
-        return optimize.root_scalar(self._r_m_func, args=(impact_param, rel_vel))
+        return optimize.root_scalar(self._r_m_func,
+                                    bracket=[1e-10, 1e5],
+                                    args=(impact_param, rel_vel))
 
-
-    def _deflection_integrand(self, rel_vel, impact_param):
+    def _deflection_integrand(self, radius, impact_param, rel_vel):
         """ Integrand for computing the deflection angle """
+        gamma_2 = 0.5 * self._mu * rel_vel**2
+        tmp = np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
+        return radius**2 / tmp
 
-    def _deflection_angle(self, rel_vel, impact_param):
+    def _deflection_angle(self, impact_param, rel_vel):
         """
         Compute the deflection angle for a given relative velocity and
         impact parameter
         """
-        r_m = self._calc_r_m(impact, param, rel_vel)
-        integrate.quad()
-        pass
+        r_m = self._calc_r_m(impact_param, rel_vel).root
+        integral, _ = integrate.quad(self._deflection_integrand,
+                                     r_m, np.inf,
+                                     args=(impact_param, rel_vel))
+        return np.pi - 2 * impact_param * integral
 
+    def eval(self, temp):
+        pass
 
 class HcbCollisionIntegral(CollisionIntegralModel):
     """
@@ -212,7 +220,8 @@ class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
         "hcb": HcbCollisionIntegral,
-        "curve_fit": CICurveFit
+        "curve_fit": CICurveFit,
+        "numerical": NumericCollisionIntegral,
     }
 
     def construct_ci(self, **kwargs):
@@ -247,9 +256,12 @@ class CICurveFitCollection:
 if __name__ == "__main__":
     cf = CICurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
     ci = CollisionIntegral()
-    hcb_co2_co2_11 = ci.construct_ci(ci_type="hcb",
-                                     sigma=3.763, epsilon=244, mu=0.04401,
-                                     l=1, s=1)
-    hcb_co2_co2_22 = ci.construct_ci(ci_type="hcb",
-                                     sigma=3.763, epsilon=244, mu=0.04401,
-                                     l=2, s=2)
+    #hcb_co2_co2_11 = ci.construct_ci(ci_type="hcb",
+    #                                 sigma=3.763, epsilon=244, mu=0.04401,
+    #                                 l=1, s=1)
+    #hcb_co2_co2_22 = ci.construct_ci(ci_type="hcb",
+    #                                 sigma=3.763, epsilon=244, mu=0.04401,
+    #                                 l=2, s=2)
+    #
+    numeric_ci = ci.construct_ci(ci_type="numerical", potential="lennard_jones",
+                                 sigma=3.763, epsilon=244, mu=0.04401, l=1, s=1)
