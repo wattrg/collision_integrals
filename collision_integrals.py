@@ -39,7 +39,7 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
 
 
 
-class CollisionIntegralModel(ABC):
+class ColIntModel(ABC):
     """ Base class for collision integral models """
 
     @abstractmethod
@@ -51,7 +51,7 @@ def lennard_jones(radius, sigma, epsilon):
     return 4 * epsilon * ((sigma/radius)**12 - (sigma/radius)**6)
 
 
-class NumericCollisionIntegral(CollisionIntegralModel):
+class NumericCollisionIntegral(ColIntModel):
     """ Collision integral performed numerically from scratch """
 
     POTENTIALS = {
@@ -99,13 +99,27 @@ class NumericCollisionIntegral(CollisionIntegralModel):
         r_m = self._calc_r_m(impact_param, rel_vel).root
         integral, _ = integrate.quad(self._deflection_integrand,
                                      r_m, np.inf,
+                                     limit=100,
                                      args=(impact_param, rel_vel))
         return np.pi - 2 * impact_param * integral
+
+    def _collision_cross_section_integrand(self, impact_parameter, rel_vel):
+        """ Compute the integrand for the collision cross section """
+        deflection_angle = self._deflection_angle(impact_parameter, rel_vel)
+        return (1 - np.cos(deflection_angle)**self._l) * impact_parameter
+
+    def _collision_cross_section(self, rel_vel):
+        """Compute the collision cross section for a given relative velocity"""
+        integral, _ = integrate.quad(self._collision_cross_section_integrand,
+                                     0.0, np.inf,
+                                     limit=100,
+                                     args=(rel_vel))
+        return 2 * np.pi * integral
 
     def eval(self, temp):
         pass
 
-class HcbCollisionIntegral(CollisionIntegralModel):
+class DimensionlessColInt(ColIntModel):
     """
     Collision integrals calculated using the non-dimensional collision integrals
     from Hirschfelder, Curtiss, and Bird (1964) appendix I-M (page 1126)
@@ -139,13 +153,12 @@ class HcbCollisionIntegral(CollisionIntegralModel):
 
         # non-dimensionalise the collision integrals
         temps = temp_star * self._epsilon
-        print(temps)
         factor = 0.5 * factorial((self.s + 1)) * (1 - 0.5 * ((1 + (-1)**self.l)/(1 + self.l)))
-        mass_factor = np.sqrt(self.k_B * temps / (2 * np.pi * self._mu))
+        mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
         omega = factor * np.pi * self._sigma**2 * omega_star * mass_factor
 
         # interpolate the data
-        self._omega_interp = interpolate.interp1d(temps, omega)
+        self._omega_interp = interpolate.interp1d(temps, omega, kind="quadratic")
 
     def eval(self, temp):
         return self._omega_interp(temp)
@@ -157,7 +170,7 @@ class HcbCollisionIntegral(CollisionIntegralModel):
         return self._epsilon
 
 
-class CICurveFitModel(CollisionIntegralModel):
+class CICurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, temps, cis):
@@ -207,7 +220,7 @@ class CICurveFit:
         "pi_Omega": CICurveFitPiOmega,
     }
 
-    def get_curve_fit(self, **kwargs):
+    def construct_ci(self, **kwargs):
         curve_fit_type = kwargs["curve_fit_type"]
         temps = kwargs["temps"]
         cis = kwargs["cis"]
@@ -219,7 +232,7 @@ class CICurveFit:
 class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
-        "hcb": HcbCollisionIntegral,
+        "dimensionless": DimensionlessColInt,
         "curve_fit": CICurveFit,
         "numerical": NumericCollisionIntegral,
     }
@@ -241,27 +254,58 @@ class CICurveFitCollection:
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
             for ii in ["11", "22"]:
-                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = CICurveFit().get_curve_fit(
+                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = CICurveFit().construct_ci(
                     curve_fit_type=self._curve_fit_type,
                     temps=pair_ci[f"pi_Omega_{ii}"]["temps"],
                     cis=pair_ci[f"pi_Omega_{ii}"]["cis"]
                 )
 
-    def get_coeffs(self, pair=None):
+    def get_cis(self, pair=None, ci_type=None):
+        """ Return the collision integrals """
         if pair:
+            if ci_type:
+                return self._ci_coeffs[pair][ci_type]
             return self._ci_coeffs[pair]
         return self._ci_coeffs
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
     cf = CICurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
     ci = CollisionIntegral()
-    #hcb_co2_co2_11 = ci.construct_ci(ci_type="hcb",
-    #                                 sigma=3.763, epsilon=244, mu=0.04401,
-    #                                 l=1, s=1)
-    #hcb_co2_co2_22 = ci.construct_ci(ci_type="hcb",
-    #                                 sigma=3.763, epsilon=244, mu=0.04401,
-    #                                 l=2, s=2)
-    #
-    numeric_ci = ci.construct_ci(ci_type="numerical", potential="lennard_jones",
-                                 sigma=3.763, epsilon=244, mu=0.04401, l=1, s=1)
+    hcb_co2_co2_11 = ci.construct_ci(ci_type="dimensionless",
+                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
+                                     l=1, s=1)
+    hcb_co2_co2_22 = ci.construct_ci(ci_type="dimensionless",
+                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
+                                     l=2, s=2)
+    hcb_co2_n2_11 = ci.construct_ci(ci_type="dimensionless",
+                                    sigma=3.692, epsilon=154.26, mu=0.01712,
+                                    l=1, s=1)
+    temps = np.linspace(300, 20000, 150)
+    hcb_omega_co2_co2_11 = hcb_co2_co2_11.eval(temps)
+    hcb_omega_co2_co2_22 = hcb_co2_co2_22.eval(temps)
+    hcb_omega_co2_n2_11 = hcb_co2_n2_11.eval(temps)
+    wright_omega_11 = cf.get_cis(pair="CO2:CO2", ci_type="pi_Omega_11").eval(temps)
+    wright_omega_22 = cf.get_cis(pair="CO2:CO2", ci_type="pi_Omega_22").eval(temps)
+    wright_omega_co2_n2_22 = cf.get_cis(pair="CO2:N2", ci_type="pi_Omega_11").eval(temps)
+
+    fig, ax = plt.subplots(2, 2)
+    ax[0, 0].plot(temps, hcb_omega_co2_co2_11, label="dimensionless")
+    ax[0, 0].plot(temps, wright_omega_11, label="Wright et al")
+    ax[0, 0].set_xlabel("Temperature [K]")
+    ax[0, 0].set_ylabel("$\\Omega^{1,1}_{CO_2, CO_2}$")
+    ax[0, 0].legend()
+    ax[0 ,1].plot(temps, hcb_omega_co2_co2_22, label="dimensionless")
+    ax[0 ,1].plot(temps, wright_omega_22, label="Wright et al")
+    ax[0 ,1].set_xlabel("Temperature [K]")
+    ax[0 ,1].set_ylabel("$\\Omega^{2,2}_{CO_2, CO_2}$")
+    ax[0 ,1].legend()
+    ax[1 ,0].plot(temps, hcb_omega_co2_n2_11, label="dimensionless")
+    ax[1 ,0].plot(temps, wright_omega_co2_n2_22, label="Wright et al")
+    ax[1 ,0].set_xlabel("Temperature [K]")
+    ax[1 ,0].set_ylabel("$\\Omega^{2,2}_{CO_2, CO_2}$")
+    ax[1 ,0].legend()
+
+    plt.show()
