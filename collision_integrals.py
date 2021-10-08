@@ -83,20 +83,20 @@ class NumericCollisionIntegral(ColIntModel):
         """ Compute the value of r_m for computing the deflection angle """
         return optimize.root_scalar(self._r_m_func,
                                     bracket=[1e-10, 1e5],
-                                    args=(impact_param, rel_vel))
+                                    args=(impact_param, rel_vel)).root
 
     def _deflection_integrand(self, radius, impact_param, rel_vel):
         """ Integrand for computing the deflection angle """
         gamma_2 = 0.5 * self._mu * rel_vel**2
         tmp = np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
-        return radius**2 / tmp
+        return 1 / tmp / radius**2
 
     def _deflection_angle(self, impact_param, rel_vel):
         """
         Compute the deflection angle for a given relative velocity and
         impact parameter
         """
-        r_m = self._calc_r_m(impact_param, rel_vel).root
+        r_m = self._calc_r_m(impact_param, rel_vel)
         integral, _ = integrate.quad(self._deflection_integrand,
                                      r_m, np.inf,
                                      limit=100,
@@ -154,7 +154,8 @@ class DimensionlessColInt(ColIntModel):
         # non-dimensionalise the collision integrals
         temps = temp_star * self._epsilon
         factor = 0.5 * factorial((self.s + 1)) * (1 - 0.5 * ((1 + (-1)**self.l)/(1 + self.l)))
-        mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
+        #mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
+        mass_factor = 0.3
         omega = factor * np.pi * self._sigma**2 * omega_star * mass_factor
 
         # interpolate the data
@@ -233,7 +234,7 @@ class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
         "dimensionless": DimensionlessColInt,
-        "curve_fit": ColIntCurveFit,
+        "curve_fit": ColIntCurveFit, # this doesn't actually work
         "numerical": NumericCollisionIntegral,
     }
 
@@ -260,10 +261,12 @@ class ColIntCurveFitCollection:
                     cis=pair_ci[f"pi_Omega_{ii}"]["cis"]
                 )
 
-    def get_cis(self, pair=None, ci_type=None):
+    def get_col_ints(self, pair=None, ci_type=None):
         """ Return the collision integrals """
         if pair:
             if ci_type:
                 return self._ci_coeffs[pair][ci_type]
             return self._ci_coeffs[pair]
         return self._ci_coeffs
+
+

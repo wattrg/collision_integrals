@@ -24,10 +24,10 @@ def plot_dimensionless_ci():
     hcb_omega_co2_co2_22 = hcb_co2_co2_22.eval(temps)
     hcb_omega_co2_n2_11 = hcb_co2_n2_11.eval(temps)
     hcb_omega_co2_n2_22 = hcb_co2_n2_22.eval(temps)
-    wright_omega_11 = cfs.get_cis(pair="CO2:CO2", ci_type="pi_Omega_11").eval(temps)
-    wright_omega_22 = cfs.get_cis(pair="CO2:CO2", ci_type="pi_Omega_22").eval(temps)
-    wright_omega_co2_n2_11 = cfs.get_cis(pair="CO2:N2", ci_type="pi_Omega_11").eval(temps)
-    wright_omega_co2_n2_22 = cfs.get_cis(pair="CO2:N2", ci_type="pi_Omega_22").eval(temps)
+    wright_omega_11 = cfs.get_col_ints(pair="CO2:CO2", ci_type="pi_Omega_11").eval(temps)
+    wright_omega_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="pi_Omega_22").eval(temps)
+    wright_omega_co2_n2_11 = cfs.get_col_ints(pair="CO2:N2", ci_type="pi_Omega_11").eval(temps)
+    wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="pi_Omega_22").eval(temps)
 
     fig, ax = plt.subplots(2, 2)
     ax[0, 0].plot(temps, hcb_omega_co2_co2_11, label="dimensionless")
@@ -53,7 +53,7 @@ def plot_dimensionless_ci():
 
 def plot_curve_fit_data():
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
-    co2_co2_ci = cfs.get_cis(pair="CO2:CO2", ci_type="pi_Omega_11")
+    co2_co2_ci = cfs.get_col_ints(pair="CO2:CO2", ci_type="pi_Omega_11")
     wright_co2_co2_temps = co2_co2_ci._temps
     wright_co2_co2_cis = co2_co2_ci._cis
 
@@ -67,8 +67,46 @@ def plot_curve_fit_data():
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel("$\\Omega^{(1,1)}_{CO_2, CO_2}$")
 
+def numeric_deflection_integrand(impact, rel_vel):
+    ci = CollisionIntegral()
+    numeric_ci = ci.construct_ci(ci_type="numerical",
+                                 sigma=3.7, epsilon=244,
+                                 l=1, s=1,
+                                 potential="lennard_jones",
+                                 mu=0.02)
+    r_m = numeric_ci._calc_r_m(impact, rel_vel)
+    radii = np.linspace(r_m, 10, 100)
+    integrand = numeric_ci._deflection_integrand(radii, impact, rel_vel)
+    fig, ax = plt.subplots()
+    ax.plot(radii, integrand)
+
+def numeric_deflection_angle(ci, impacts, rel_vel, n=100):
+    deflection = np.zeros_like(impacts)
+    for i, impact in enumerate(impacts):
+        deflection[i] = ci._deflection_angle(impact, rel_vel)
+    return deflection
+
+def numeric_deflection_angles(rel_vels):
+    ci = CollisionIntegral()
+    numeric_ci = ci.construct_ci(ci_type="numerical",
+                                 sigma=3.7, epsilon=244,
+                                 l=1, s=1,
+                                 potential="lennard_jones",
+                                 mu=0.02)
+
+    fig, ax = plt.subplots()
+    impacts = np.linspace(0, 20, 1000)
+    for i, rel_vel in enumerate(rel_vels):
+        deflection_angles = numeric_deflection_angle(numeric_ci, impacts, rel_vel, 100)
+        ax.plot(impacts, 1-np.cos(deflection_angles), label=f"g = {rel_vel}")
+    ax.legend()
+
+
 
 if __name__ == "__main__":
-    plot_curve_fit_data()
-    plot_dimensionless_ci()
+    # plot_curve_fit_data()
+    # plot_dimensionless_ci()
+
+    # numeric_deflection_integrand(1, 1)
+    numeric_deflection_angles([10, 100, 500])
     plt.show()
