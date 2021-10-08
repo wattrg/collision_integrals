@@ -242,7 +242,7 @@ class CollisionIntegral:
         return self.CI_TYPES[ci_type](**kwargs)
 
 
-class CICurveFitCollection:
+class ColIntCurveFitCollection:
     """
     Collection of Curve fit collision integrals
     """
@@ -267,55 +267,3 @@ class CICurveFitCollection:
                 return self._ci_coeffs[pair][ci_type]
             return self._ci_coeffs[pair]
         return self._ci_coeffs
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    cf = CICurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
-    ci = CollisionIntegral()
-    hcb_co2_co2_11 = ci.construct_ci(ci_type="dimensionless",
-                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
-                                     l=1, s=1)
-    hcb_co2_co2_22 = ci.construct_ci(ci_type="dimensionless",
-                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
-                                     l=2, s=2)
-    hcb_co2_n2_11 = ci.construct_ci(ci_type="dimensionless",
-                                    sigma=3.692, epsilon=154.26, mu=0.01712,
-                                    l=1, s=1)
-    hcb_co2_n2_22 = ci.construct_ci(ci_type="dimensionless",
-                                    sigma=3.692, epsilon=154.26, mu=0.01712,
-                                    l=2, s=2)
-    temps = np.linspace(300, 20000, 150)
-    hcb_omega_co2_co2_11 = hcb_co2_co2_11.eval(temps)
-    hcb_omega_co2_co2_22 = hcb_co2_co2_22.eval(temps)
-    hcb_omega_co2_n2_11 = hcb_co2_n2_11.eval(temps)
-    hcb_omega_co2_n2_22 = hcb_co2_n2_22.eval(temps)
-    wright_omega_11 = cf.get_cis(pair="CO2:CO2", ci_type="pi_Omega_11").eval(temps)
-    wright_omega_22 = cf.get_cis(pair="CO2:CO2", ci_type="pi_Omega_22").eval(temps)
-    wright_omega_co2_n2_11 = cf.get_cis(pair="CO2:N2", ci_type="pi_Omega_11").eval(temps)
-    wright_omega_co2_n2_22 = cf.get_cis(pair="CO2:N2", ci_type="pi_Omega_22").eval(temps)
-
-    fig, ax = plt.subplots(2, 2)
-    ax[0, 0].plot(temps, hcb_omega_co2_co2_11, label="dimensionless")
-    ax[0, 0].plot(temps, wright_omega_11, label="Wright et al")
-    ax[0, 0].set_xlabel("Temperature [K]")
-    ax[0, 0].set_ylabel("$\\Omega^{1,1}_{CO_2, CO_2}$")
-    ax[0, 0].legend()
-    ax[0 ,1].plot(temps, hcb_omega_co2_co2_22, label="dimensionless")
-    ax[0 ,1].plot(temps, wright_omega_22, label="Wright et al")
-    ax[0 ,1].set_xlabel("Temperature [K]")
-    ax[0 ,1].set_ylabel("$\\Omega^{2,2}_{CO_2, CO_2}$")
-    ax[0 ,1].legend()
-    ax[1 ,0].plot(temps, hcb_omega_co2_n2_11, label="dimensionless")
-    ax[1 ,0].plot(temps, wright_omega_co2_n2_11, label="Wright et al")
-    ax[1 ,0].set_xlabel("Temperature [K]")
-    ax[1 ,0].set_ylabel("$\\Omega^{1,1}_{CO_2, N_2}$")
-    ax[1 ,0].legend()
-    ax[1 ,1].plot(temps, hcb_omega_co2_n2_22, label="dimensionless")
-    ax[1 ,1].plot(temps, wright_omega_co2_n2_22, label="Wright et al")
-    ax[1 ,1].set_xlabel("Temperature [K]")
-    ax[1 ,1].set_ylabel("$\\Omega^{2,2}_{CO_2, N_2}$")
-    ax[1 ,1].legend()
-
-    plt.show()
