@@ -170,7 +170,7 @@ class DimensionlessColInt(ColIntModel):
         return self._epsilon
 
 
-class CICurveFitModel(ColIntModel):
+class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, temps, cis):
@@ -199,25 +199,25 @@ class CICurveFitModel(ColIntModel):
         return f"[a={self._a}, b={self._b}, c={self._c}, d={self._d}]"
 
 
-class CICurveFitPiOmega(CICurveFitModel):
+class ColIntCurveFitPiOmega(ColIntCurveFitModel):
     """ Curve fit of pi * Omega """
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d) / np.pi
 
 
-class CICurveFitOmega(CICurveFitModel):
+class ColIntCurveFitOmega(ColIntCurveFitModel):
     """ Curve fitted collision integral """
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class CICurveFit:
+class ColIntCurveFit:
     """ Factory for collision integral curve fits """
     CURVE_FIT_TYPES = {
-        "Omega": CICurveFitOmega,
-        "pi_Omega": CICurveFitPiOmega,
+        "Omega": ColIntCurveFitOmega,
+        "pi_Omega": ColIntCurveFitPiOmega,
     }
 
     def construct_ci(self, **kwargs):
@@ -233,7 +233,7 @@ class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
         "dimensionless": DimensionlessColInt,
-        "curve_fit": CICurveFit,
+        "curve_fit": ColIntCurveFit,
         "numerical": NumericCollisionIntegral,
     }
 
@@ -254,7 +254,7 @@ class ColIntCurveFitCollection:
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
             for ii in ["11", "22"]:
-                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = CICurveFit().construct_ci(
+                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = ColIntCurveFit().construct_ci(
                     curve_fit_type=self._curve_fit_type,
                     temps=pair_ci[f"pi_Omega_{ii}"]["temps"],
                     cis=pair_ci[f"pi_Omega_{ii}"]["cis"]

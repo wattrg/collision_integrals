@@ -51,8 +51,6 @@ def plot_dimensionless_ci():
     ax[1 ,1].set_ylabel("$\\Omega^{2,2}_{CO_2, N_2}$")
     ax[1 ,1].legend()
 
-    plt.show()
-
 def plot_curve_fit_data():
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
     co2_co2_ci = cfs.get_cis(pair="CO2:CO2", ci_type="pi_Omega_11")
@@ -68,8 +66,9 @@ def plot_curve_fit_data():
     ax.legend()
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel("$\\Omega^{(1,1)}_{CO_2, CO_2}$")
-    plt.show()
 
 
 if __name__ == "__main__":
     plot_curve_fit_data()
+    plot_dimensionless_ci()
+    plt.show()
