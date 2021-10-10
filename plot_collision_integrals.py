@@ -101,12 +101,21 @@ def numeric_deflection_angles(rel_vels):
         ax.plot(impacts, 1-np.cos(deflection_angles), label=f"g = {rel_vel}")
     ax.legend()
 
-
+def plot_numeric_cross_section(l=1):
+    ci = CollisionIntegral()
+    numeric_ci = ci.construct_ci(ci_type="numerical",
+                                 potential="lennard_jones",
+                                 sigma=3.7, epsilon=244, mu=0.02,
+                                 l=l, s=l)
+    rel_vels = np.linspace(10, 500)
+    numeric_ci._collision_cross_section(rel_vels)
 
 if __name__ == "__main__":
     # plot_curve_fit_data()
     # plot_dimensionless_ci()
 
     # numeric_deflection_integrand(1, 1)
-    numeric_deflection_angles([10, 100, 500])
+    # numeric_deflection_angles([10, 100, 500])
+    plot_numeric_cross_section()
+
     plt.show()
