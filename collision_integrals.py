@@ -82,9 +82,16 @@ class NumericCollisionIntegral(ColIntModel):
 
     def _calc_r_m(self, impact_param, rel_vel):
         """ Compute the value of r_m for computing the deflection angle """
-        return optimize.root_scalar(self._r_m_func,
-                                    bracket=[1e-10, 1e5],
-                                    args=(impact_param, rel_vel)).root
+        if hasattr(rel_vel, "__iter__"):
+            r_ms = np.zeros_like(rel_vel)
+            for i, g in rel_vel:
+                r_ms[i] = optimize.root_scalar(self._r_m_func,
+                                               bracket=[1e-5, 1e5],
+                                               args=(impact_param, g)).root
+        else:
+            return optimize.root_scalar(self._r_m_func,
+                                        bracket=[1e-10, 1e20],
+                                        args=(impact_param, rel_vel)).root
 
     def _deflection_integrand(self, radius, impact_param, rel_vel):
         """ Integrand for computing the deflection angle """

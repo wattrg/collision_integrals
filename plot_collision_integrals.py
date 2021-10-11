@@ -122,30 +122,14 @@ def numeric_deflection_angles(rel_vels):
         ax.plot(impacts, 1-np.cos(deflection_angles), label=f"g = {rel_vel}")
     ax.legend()
 
-def comparison_co2_co2_11():
+def plot_numeric_cross_section(l=1):
     ci = CollisionIntegral()
-    laricchiuta = ci.construct_ci(ci_type="laricchiuta",
-                                          l=1, s=1, beta=10,
-                                          sigma=3.763, epsilon=244)
-    temps = np.linspace(300, 10000, 150)
-    omega_11 = laricchiuta.eval(temps)
-
-    cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="pi_Omega")
-    co2_co2_ci = cfs.get_col_ints(pair="CO2:CO2", ci_type="pi_Omega_11")
-
-    wright_co2_co2_temps = co2_co2_ci._temps
-    wright_co2_co2_cis = co2_co2_ci._cis
-
-    hcb_co2_co2_11 = ci.construct_ci(ci_type="hcb",
-                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
-                                     l=1, s=1)
-
-    fig, ax = plt.subplots()
-    ax.plot(temps, co2_co2_ci.eval(temps), label="Wright et al")
-    ax.plot(temps, omega_11, label="Laricchiuta")
-    ax.plot(temps, hcb_co2_co2_11.eval(temps), label="HCB")
-    ax.legend()
-
+    numeric_ci = ci.construct_ci(ci_type="numerical",
+                                 potential="lennard_jones",
+                                 sigma=3.7, epsilon=244, mu=0.02,
+                                 l=l, s=l)
+    rel_vels = np.linspace(10, 500)
+    numeric_ci._collision_cross_section(rel_vels)
 
 if __name__ == "__main__":
     # plot_curve_fit_data()
@@ -153,5 +137,4 @@ if __name__ == "__main__":
 
     # numeric_deflection_integrand(1, 1)
     # numeric_deflection_angles([10, 100, 500])
-    # comparison_c02_co2_11()
     plt.show()
