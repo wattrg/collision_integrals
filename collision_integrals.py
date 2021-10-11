@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hcb_ci_data import hcb_ci_data
 from wright_ci_data import wright_ci_data
+from Laricchiuta import laricchiuta_coeffs
 from abc import ABC, abstractmethod
 
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
@@ -119,7 +120,7 @@ class NumericCollisionIntegral(ColIntModel):
     def eval(self, temp):
         pass
 
-class DimensionlessColInt(ColIntModel):
+class DimensionlessColIntHCB(ColIntModel):
     """
     Collision integrals calculated using the non-dimensional collision integrals
     from Hirschfelder, Curtiss, and Bird (1964) appendix I-M (page 1126)
@@ -154,8 +155,7 @@ class DimensionlessColInt(ColIntModel):
         # non-dimensionalise the collision integrals
         temps = temp_star * self._epsilon
         factor = 0.5 * factorial((self.s + 1)) * (1 - 0.5 * ((1 + (-1)**self.l)/(1 + self.l)))
-        #mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
-        mass_factor = 0.3
+        mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
         omega = factor * np.pi * self._sigma**2 * omega_star * mass_factor
 
         # interpolate the data
@@ -169,6 +169,62 @@ class DimensionlessColInt(ColIntModel):
 
     def get_epsilon(self):
         return self._epsilon
+
+
+class ColIntLaricchiuta(ColIntModel):
+    """
+    Dimensionless collision integrals from Laricchiuta et al:
+    Classical transport collision integrals for a Lennard-Jones like
+    phenomenological model potential 2007
+    """
+
+    def __init__(self, **kwargs):
+        # order of collision integral
+        self._l = kwargs["l"]
+        self._s = kwargs["s"]
+
+        # physical parameters
+        self._sigma = kwargs["sigma"]
+        self._epsilon = kwargs["epsilon"]
+        self._beta = kwargs.get("beta", 8)
+
+        # type of particles colliding
+        self._col_type = kwargs.get("col_type", "neutral-neutral")
+
+        # set the non zeta values
+        if self._col_type == "neutral-neutral":
+            self._zeta = [0.8002, 0.049256]
+        elif self._col_type == "ion-neutral":
+            self._zeta = [0.7564, 0.064605]
+
+        # compute x_0
+        self._x_0 = self._zeta[0] * self._beta ** self._zeta[1]
+
+        # get the values of c
+        self._cs = laricchiuta_coeffs[f"omega_{self._l}{self._s}"]
+
+        # compute coefficients
+        self._coeffs = []
+        for i in range(7):
+            coeff = 0.0
+            for j, c in enumerate(self._cs[i + 1]):
+                coeff += c * self._beta**j
+            self._coeffs.append(coeff)
+
+    def get_coeffs(self):
+        """ Return a_i(beta) """
+        return self._coeffs
+
+    def eval(self, temp):
+        temp_star = temp / self._epsilon
+        if np.any(temp_star < 2e-4) or np.any(temp_star > 1e3):
+            raise ValueError("Temperature outside of valid range")
+        a1, a2, a3, a4, a5, a6, a7 = self.get_coeffs()
+        x = np.log(temp_star)
+        ln_omega = (a1 + a2*x) * \
+                    np.exp((x-a3)/a4) / (np.exp((x-a3)/a4) + np.exp((a3-x)/a4)) +\
+                    a5 * np.exp((x-a6)/a7) / (np.exp((x-a6)/a7) + np.exp((a6-x)/a7))
+        return np.exp(ln_omega) * (self._x_0 * self._sigma)**2
 
 
 class ColIntCurveFitModel(ColIntModel):
@@ -214,8 +270,11 @@ class ColIntCurveFitOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class ColIntCurveFit:
-    """ Factory for collision integral curve fits """
+class ColIntGuptaYos:
+    """
+    Factory for collision integral curve fits in the form given
+    by Gupta Yos
+    """
     CURVE_FIT_TYPES = {
         "Omega": ColIntCurveFitOmega,
         "pi_Omega": ColIntCurveFitPiOmega,
@@ -233,8 +292,9 @@ class ColIntCurveFit:
 class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
-        "dimensionless": DimensionlessColInt,
-        "curve_fit": ColIntCurveFit, # this doesn't actually work
+        "hcb": DimensionlessColIntHCB,
+        "laricchiuta": ColIntLaricchiuta,
+        "gupta_yos": ColIntGuptaYos,
         "numerical": NumericCollisionIntegral,
     }
 
@@ -255,7 +315,7 @@ class ColIntCurveFitCollection:
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
             for ii in ["11", "22"]:
-                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = ColIntCurveFit().construct_ci(
+                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = ColIntGuptaYos().construct_ci(
                     curve_fit_type=self._curve_fit_type,
                     temps=pair_ci[f"pi_Omega_{ii}"]["temps"],
                     cis=pair_ci[f"pi_Omega_{ii}"]["cis"]
@@ -270,3 +330,14 @@ class ColIntCurveFitCollection:
         return self._ci_coeffs
 
 
+if __name__ == "__main__":
+    ci = CollisionIntegral().construct_ci(
+        ci_type="laricchiuta",
+        l=1,
+        s=1,
+        sigma=3.829,
+        epsilon=144,
+        beta=8.0746
+    )
+    print(ci.get_coeffs())
+    print(ci.eval(10000))
