@@ -84,19 +84,35 @@ class NumericCollisionIntegral(ColIntModel):
         """ Compute the value of r_m for computing the deflection angle """
         if hasattr(rel_vel, "__iter__"):
             r_ms = np.zeros_like(rel_vel)
-            for i, g in rel_vel:
+            for i, g in enumerate(rel_vel):
                 r_ms[i] = optimize.root_scalar(self._r_m_func,
-                                               bracket=[1e-5, 1e5],
+                                               x0=1e-10, x1=1e-9,
+                                               method="secant",
                                                args=(impact_param, g)).root
+            return r_ms
         else:
             return optimize.root_scalar(self._r_m_func,
-                                        bracket=[1e-10, 1e20],
+                                        x0=1e-10, x1=1e-9,
+                                        method="secant",
                                         args=(impact_param, rel_vel)).root
 
     def _deflection_integrand(self, radius, impact_param, rel_vel):
         """ Integrand for computing the deflection angle """
+
         gamma_2 = 0.5 * self._mu * rel_vel**2
-        tmp = np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
+        tmp = 1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2
+        if hasattr(tmp, "__iter__"):
+            tmp[tmp < 0.0] = 1e-300
+        else:
+            tmp = max(tmp, 1e-300)
+        if np.any(tmp < 0):
+            print(f"WARNING: Invalid value under square root\n"
+                  f"         radius = {radius}\n"
+                  f"         impact_param = {impact_param}\n"
+                  f"         rel_vel = {rel_vel}\n"
+                  f"         sqrt = {tmp}\n"
+                  f"         r_m = {self._calc_r_m(impact_param, rel_vel)}")
+        tmp = np.sqrt(tmp)
         return 1 / tmp / radius**2
 
     def _deflection_angle(self, impact_param, rel_vel):
@@ -105,10 +121,18 @@ class NumericCollisionIntegral(ColIntModel):
         impact parameter
         """
         r_m = self._calc_r_m(impact_param, rel_vel)
-        integral, _ = integrate.quad(self._deflection_integrand,
-                                     r_m, np.inf,
-                                     limit=100,
-                                     args=(impact_param, rel_vel))
+        if hasattr(rel_vel, "__iter__"):
+            integral = np.zeros_like(rel_vel)
+            for i, g in enumerate(rel_vel):
+                integral[i],_ = integrate.quad(self._deflection_integrand,
+                                               r_m + 1e-10, np.inf,
+                                               limit=100,
+                                               args=(impact_param, g))
+        else:
+            integral, _ = integrate.quad(self._deflection_integrand,
+                                        r_m + 1e-10, np.inf,
+                                        limit=100,
+                                        args=(impact_param, rel_vel))
         return np.pi - 2 * impact_param * integral
 
     def _collision_cross_section_integrand(self, impact_parameter, rel_vel):
@@ -118,10 +142,18 @@ class NumericCollisionIntegral(ColIntModel):
 
     def _collision_cross_section(self, rel_vel):
         """Compute the collision cross section for a given relative velocity"""
-        integral, _ = integrate.quad(self._collision_cross_section_integrand,
-                                     0.0, np.inf,
-                                     limit=100,
-                                     args=(rel_vel))
+        if hasattr(rel_vel, "__iter__"):
+            integral = np.zeros_like(rel_vel)
+            for i, g in enumerate(rel_vel):
+                integral[i], _ = integrate.quad(self._collision_cross_section_integrand,
+                                            0.0, np.inf,
+                                            limit=100,
+                                            args=(g))
+        else:
+            integral, _ = integrate.quad(self._collision_cross_section_integrand,
+                                        0.0, np.inf,
+                                        limit=100,
+                                        args=(rel_vel))
         return 2 * np.pi * integral
 
     def eval(self, temp):

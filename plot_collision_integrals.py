@@ -96,10 +96,12 @@ def numeric_deflection_integrand(impact, rel_vel):
                                  potential="lennard_jones",
                                  mu=0.02)
     r_m = numeric_ci._calc_r_m(impact, rel_vel)
-    radii = np.linspace(r_m, 10, 100)
+    radii = np.linspace(r_m, 100, 100)
     integrand = numeric_ci._deflection_integrand(radii, impact, rel_vel)
     fig, ax = plt.subplots()
     ax.plot(radii, integrand)
+    ax.set_xlabel("radius, $\AA$")
+    ax.set_ylabel("deflection integrand")
 
 def numeric_deflection_angle(ci, impacts, rel_vel, n=100):
     deflection = np.zeros_like(impacts)
@@ -121,6 +123,8 @@ def numeric_deflection_angles(rel_vels):
         deflection_angles = numeric_deflection_angle(numeric_ci, impacts, rel_vel, 100)
         ax.plot(impacts, 1-np.cos(deflection_angles), label=f"g = {rel_vel}")
     ax.legend()
+    ax.set_xlabel("impact parameter $\AA$")
+    ax.set_ylabel("$1-\\cos\\Theta$")
 
 def plot_numeric_cross_section(l=1):
     ci = CollisionIntegral()
@@ -133,8 +137,9 @@ def plot_numeric_cross_section(l=1):
 
 if __name__ == "__main__":
     # plot_curve_fit_data()
-    ci_comparison()
+    # ci_comparison()
 
-    # numeric_deflection_integrand(1, 1)
+    # numeric_deflection_integrand(17, 10)
     # numeric_deflection_angles([10, 100, 500])
+    plot_numeric_cross_section()
     plt.show()
