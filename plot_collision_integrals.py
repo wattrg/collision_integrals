@@ -23,9 +23,9 @@ def ci_comparison_n2():
                                    temps=wright_ci_data["N2:N2"]["Omega_22"]["temps"],
                                    cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"])
     laricchiuta_n2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1,epsilon=132,
-                                           sigma=3.829, beta=8.0746)
+                                           sigma=3.829, beta=10)#beta=8.0746)
     laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,epsilon=132,
-                                           sigma=3.829, beta=8.0746)
+                                           sigma=3.829, beta=10)#8.0746)
 
     fig, ax = plt.subplots(2, 1, sharex=True)
     fig.suptitle("$N_2 : N_2 $ collision integrals")
@@ -45,63 +45,43 @@ def ci_comparison_co2():
     temps = np.linspace(300, 30000, 250)
     ci = CollisionIntegral()
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
-    hcb_co2_co2_11 = ci.construct_ci(ci_type="hcb",
-                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
-                                     l=1, s=1)
-    hcb_co2_co2_22 = ci.construct_ci(ci_type="hcb",
-                                     sigma=3.763, epsilon=244, mu=0.04401*0.5,
-                                     l=2, s=2)
-    hcb_co2_n2_11 = ci.construct_ci(ci_type="hcb",
-                                    sigma=3.692, epsilon=154.26, mu=0.01712,
-                                    l=1, s=1)
-    hcb_co2_n2_22 = ci.construct_ci(ci_type="hcb",
-                                    sigma=3.692, epsilon=154.26, mu=0.01712,
-                                    l=2, s=2)
     laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=1, s=1, beta=6,
+                                          l=1, s=1, beta=10,
                                           sigma=3.763, epsilon=244)
     laricchiuta_co2_n2_11 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=1, s=1, beta=6,
+                                          l=1, s=1, beta=10,
                                             sigma=3.692, epsilon=154.26)
     laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=2, s=2, beta=6,
+                                          l=2, s=2, beta=10,
                                           sigma=3.763, epsilon=244)
     laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=2, s=2, beta=6,
+                                          l=2, s=2, beta=10,
                                             sigma=3.692, epsilon=154.26)
 
     laricchiuta_omega_co2_co2_11 = laricchiuta_co2_co2_11.eval(temps)
     laricchiuta_omega_co2_n2_11 = laricchiuta_co2_n2_11.eval(temps)
     laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_11.eval(temps)
     laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_11.eval(temps)
-    hcb_omega_co2_co2_11 = hcb_co2_co2_11.eval(temps)
-    hcb_omega_co2_co2_22 = hcb_co2_co2_22.eval(temps)
-    hcb_omega_co2_n2_11 = hcb_co2_n2_11.eval(temps)
-    hcb_omega_co2_n2_22 = hcb_co2_n2_22.eval(temps)
     wright_omega_co2_co2_11 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_11").eval(temps)
     wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(temps)
     wright_omega_co2_n2_11 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_11").eval(temps)
     wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_22").eval(temps)
 
     fig_co2_co2, ax_co2_co2 = plt.subplots(2, 1, sharex=True)
-    #ax_co2_co2[0].plot(temps, hcb_omega_co2_co2_11, label="HCB")
     ax_co2_co2[0].plot(temps, wright_omega_co2_co2_11, label="Wright et al")
     ax_co2_co2[0].plot(temps, laricchiuta_omega_co2_co2_11, label="Laricchiuta")
     ax_co2_co2[0].set_ylabel("$\\Omega^{1,1}_{CO_2, CO_2}$")
     ax_co2_co2[0].legend()
-    #ax_co2_co2[1].plot(temps, hcb_omega_co2_co2_22, label="HCB")
     ax_co2_co2[1].plot(temps, wright_omega_co2_co2_22, label="Wright et al")
     ax_co2_co2[1].plot(temps, laricchiuta_omega_co2_co2_22, label="Laricchiuta")
     ax_co2_co2[1].set_xlabel("Temperature [K]")
     ax_co2_co2[1].set_ylabel("$\\Omega^{2,2}_{CO_2, CO_2}$")
 
     fig_co2_n2, ax_co2_n2 = plt.subplots(2, 1, sharex=True)
-    #ax_co2_n2[0].plot(temps, hcb_omega_co2_n2_11, label="HCB")
     ax_co2_n2[0].plot(temps, wright_omega_co2_n2_11, label="Wright et al")
     ax_co2_n2[0].plot(temps, laricchiuta_omega_co2_n2_11, label="Laricchiuta")
     ax_co2_n2[0].set_ylabel("$\\Omega^{1,1}_{CO_2, N_2}$")
     ax_co2_n2[0].legend()
-    #ax_co2_n2[1].plot(temps, hcb_omega_co2_n2_22, label="HCB")
     ax_co2_n2[1].plot(temps, wright_omega_co2_n2_22, label="Wright et al")
     ax_co2_n2[1].plot(temps, laricchiuta_omega_co2_n2_22, label="Laricchiuta")
     ax_co2_n2[1].set_xlabel("Temperature [K]")
