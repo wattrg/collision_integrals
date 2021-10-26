@@ -11,9 +11,9 @@ from scipy.special import factorial
 from scipy import integrate
 import numpy as np
 import matplotlib.pyplot as plt
-from hcb_ci_data import hcb_ci_data
-from wright_ci_data import wright_ci_data
-from Laricchiuta import laricchiuta_coeffs
+from data.hcb_ci_data import hcb_ci_data
+from data.wright_ci_data import wright_ci_data
+from data.Laricchiuta import laricchiuta_coeffs
 from abc import ABC, abstractmethod
 
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
@@ -269,10 +269,16 @@ class ColIntLaricchiuta(ColIntModel):
 class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
-    def __init__(self, temps, cis):
-        self._temps = temps
-        self._cis = cis
-        self._evaluate_coeffs()
+    def __init__(self, **kwargs):
+        if "cis" in kwargs:
+            self._temps = kwargs["temps"]
+            self._cis = kwargs["cis"]
+            self._evaluate_coeffs()
+        elif "coeffs" in kwargs:
+            self._a, self._b, self._c, self._d = kwargs["coeffs"]
+        else:
+            raise ValueError("Curve fit model must have collision "
+                             "integrals or coefficients")
 
     @abstractmethod
     def _curve_fit_form(self, temp, a, b, c, d):
@@ -309,23 +315,37 @@ class ColIntCurveFitOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class ColIntGuptaYos:
+class ColIntCurveFit:
     """
-    Factory for collision integral curve fits in the form given
-    by Gupta Yos
+    Factory class for curve fitted collision integrals
     """
     CURVE_FIT_TYPES = {
         "Omega": ColIntCurveFitOmega,
         "pi_Omega": ColIntCurveFitPiOmega,
     }
 
-    def construct_ci(self, **kwargs):
+    def __new__(cls, **kwargs):
         curve_fit_type = kwargs["curve_fit_type"]
         temps = kwargs["temps"]
         cis = kwargs["cis"]
-        if curve_fit_type not in self.CURVE_FIT_TYPES:
+        if curve_fit_type not in cls.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return self.CURVE_FIT_TYPES[curve_fit_type](temps=temps, cis=cis)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](temps=temps, cis=cis)
+
+
+class ColIntGuptaYos(ColIntCurveFit):
+    """
+    Factory for collision integral curve fits in the form given
+    by Gupta Yos
+    """
+
+    def __new__(cls, **kwargs):
+        curve_fit_type = kwargs["curve_fit_type"]
+        coeffs = kwargs["coeffs"]
+        if curve_fit_type not in cls.CURVE_FIT_TYPES:
+            raise ValueError(curve_fit_type)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](coeffs=coeffs)
+
 
 
 class CollisionIntegral:
@@ -334,6 +354,7 @@ class CollisionIntegral:
         "hcb": DimensionlessColIntHCB,
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
+        "curve_fit": ColIntCurveFit,
         "numerical": NumericCollisionIntegral,
     }
 
@@ -354,10 +375,10 @@ class ColIntCurveFitCollection:
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
             for ii in ["11", "22"]:
-                self._ci_coeffs[pair][f"pi_Omega_{ii}"] = ColIntGuptaYos().construct_ci(
+                self._ci_coeffs[pair][f"Omega_{ii}"] = ColIntCurveFit(
                     curve_fit_type=self._curve_fit_type,
-                    temps=pair_ci[f"pi_Omega_{ii}"]["temps"],
-                    cis=pair_ci[f"pi_Omega_{ii}"]["cis"]
+                    temps=pair_ci[f"Omega_{ii}"]["temps"],
+                    cis=pair_ci[f"Omega_{ii}"]["cis"]
                 )
 
     def get_col_ints(self, pair=None, ci_type=None):
