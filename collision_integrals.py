@@ -222,13 +222,26 @@ class ColIntLaricchiuta(ColIntModel):
         self._l = kwargs["l"]
         self._s = kwargs["s"]
 
-        # physical parameters
-        self._sigma = kwargs["sigma"]
-        self._epsilon = kwargs["epsilon"]
-        self._beta = kwargs.get("beta", 8)
-
         # type of particles colliding
         self._col_type = kwargs.get("col_type", "neutral-neutral")
+
+        # physical parameters
+        if "sigma" in kwargs:
+            self._sigma = kwargs["sigma"]
+            self._epsilon = kwargs["epsilon"]
+            self._beta = kwargs.get("beta", 8)
+        elif "alphas" in kwargs:
+            self._alphas = kwargs["alphas"]
+            self._Ns = kwargs["Ns"]
+            self._compute_parameters()
+        elif "alpha" in kwargs:
+            alpha = kwargs["alpha"]
+            N = kwargs["N"]
+            self._alphas = np.array([alpha, alpha])
+            self._Ns = np.array([N, N])
+            self._compute_parameters()
+        else:
+            raise ValueError("No sigma or alpha value provided")
 
         # set the non zeta values
         if self._col_type == "neutral-neutral":
@@ -249,6 +262,29 @@ class ColIntLaricchiuta(ColIntModel):
             for j, c in enumerate(self._cs[i + 1]):
                 coeff += c * self._beta**j
             self._coeffs.append(coeff)
+
+    def get_col_type(self):
+        """ Return type of collision """
+        return self._col_type
+
+    def _compute_parameters(self):
+        """ Compute epsilon_0, r_e, and beta """
+
+        alphas = np.array(self._alphas)
+        Ns = np.array(self._Ns)
+        softness = np.cbrt(alphas)
+        self._beta = 6 + 5 / ( np.sum(softness) )
+        col_type = self.get_col_type()
+
+        if col_type == "neutral-neutral":
+            self._sigma = 1.767 * np.sum(softness) / ( np.prod(alphas)**0.095 )
+            c_d = 15.7 * np.prod(alphas) / np.sum( np.sqrt(alphas/Ns ))
+            # compute epsilon in eV, and convert to K
+            self._epsilon = 0.72 * c_d / self._sigma**6 * 11604.525
+
+        elif col_type == "ion-netrual":
+            raise NotImplementedError("calculating parameters for ion-neutral "
+                                      "collisions not implemented yet")
 
     def get_coeffs(self):
         """ Return a_i(beta) """

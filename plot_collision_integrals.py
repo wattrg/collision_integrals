@@ -22,10 +22,8 @@ def ci_comparison_n2():
     wright_et_al_n2_22 = ci.construct_ci(ci_type="curve_fit", curve_fit_type="Omega",
                                    temps=wright_ci_data["N2:N2"]["Omega_22"]["temps"],
                                    cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"])
-    laricchiuta_n2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1,epsilon=132,
-                                           sigma=3.829, beta=10)#beta=8.0746)
-    laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,epsilon=132,
-                                           sigma=3.829, beta=10)#8.0746)
+    laricchiuta_n2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=1.71, N=8)
+    laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=1.71, N=8)
 
     fig, ax = plt.subplots(2, 1, sharex=True)
     fig.suptitle("$N_2 : N_2 $ collision integrals")
@@ -44,19 +42,18 @@ def ci_comparison_n2():
 def ci_comparison_co2():
     temps = np.linspace(300, 30000, 250)
     ci = CollisionIntegral()
+
+    # wright collision integrals curve fitted
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
-    laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=1, s=1, beta=10,
-                                          sigma=3.763, epsilon=244)
-    laricchiuta_co2_n2_11 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=1, s=1, beta=10,
-                                            sigma=3.692, epsilon=154.26)
-    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=2, s=2, beta=10,
-                                          sigma=3.763, epsilon=244)
-    laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta",
-                                          l=2, s=2, beta=10,
-                                            sigma=3.692, epsilon=154.26)
+
+    # Laricchiuta collision integrals for co2:n2
+    laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,
+                                            alphas=[2.507, 1.71], Ns=[10, 8])
+    laricchiuta_co2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1,
+                                            alphas=[2.507, 1.71], Ns=[10, 8])
+
+    laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=10)
+    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=10)
 
     laricchiuta_omega_co2_co2_11 = laricchiuta_co2_co2_11.eval(temps)
     laricchiuta_omega_co2_n2_11 = laricchiuta_co2_n2_11.eval(temps)
