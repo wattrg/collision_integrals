@@ -171,6 +171,9 @@ class DimensionlessColIntHCB(ColIntModel):
     N_A = 6.022e23
 
     def __init__(self, **kwargs):
+        # warn the user this isn't ready yet
+        print("Warning: HCB collision integrals may not be correct...")
+
         # order of the collision integral
         self.l = kwargs["l"]
         self.s = kwargs["s"]
