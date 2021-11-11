@@ -29,7 +29,7 @@ def ci_comparison_n2():
     fig, ax = plt.subplots(2, 1, sharex=True)
     fig.suptitle("$N_2 - N_2 $ collision integrals")
     ax[0].plot(temps, laricchiuta_n2_n2_11.eval(temps), 'k', label="Laricchiuta")
-    ax[0].plot(temps, gupta_yos_n2_11.eval(temps), 'k:', label="Gupta, Yos, Thomas (Eilmer)")
+    ax[0].plot(temps, gupta_yos_n2_11.eval(temps), 'k:', label="Gupta et al (Eilmer)")
     ax[0].plot(temps, wright_n2_n2_eval, 'k--', label="Wright et al")
     ax[0].fill_between(temps,
                        wright_n2_n2_eval - wright_n2_n2_eval*0.1,
@@ -41,7 +41,7 @@ def ci_comparison_n2():
     ax[0].grid()
     wright_eval = wright_et_al_n2_22.eval(temps)
     ax[1].plot(temps, laricchiuta_n2_n2_22.eval(temps), 'k', label="Laricchiuta")
-    ax[1].plot(temps, gupta_yos_n2_22.eval(temps), 'k:', label="Gupta, Yos, Thomas (Eilmer)")
+    ax[1].plot(temps, gupta_yos_n2_22.eval(temps), 'k:', label="Gupta et l (Eilmer)")
     ax[1].plot(temps, wright_eval, 'k--', label="Wright et al")
     ax[1].fill_between(temps, 0.9*wright_eval, 1.1*wright_eval, label="Wright et al uncertainty", alpha=0.5)
     ax[1].set_ylabel("$\\Omega^{(2,2)}$, $\\AA^2$")

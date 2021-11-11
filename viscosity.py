@@ -1,9 +1,9 @@
-from collision_integrals import CollisionIntegral, ColIntCurveFitCollection
 import numpy as np
+from uncertainties import unumpy as unp
+import uncertainties as unct
 from matplotlib import pyplot as plt
 from data.wright_ci_data import wright_ci_data
-import uncertainties as unct
-from uncertainties import unumpy as unp
+from collision_integrals import CollisionIntegral, ColIntCurveFitCollection
 
 NA = 6.022e23
 kB = 1.38e-23
