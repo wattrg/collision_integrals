@@ -6,10 +6,10 @@ from data.wright_ci_data import wright_ci_data
 
 def ci_comparison_n2():
     """
-    Compare the collision integrals as computer by Gupta Yos and Wright et. al.
+    Compare the collision integrals as computed by Gupta Yos and Wright et. al.
     """
 
-    temps = np.linspace(300, 30000, 250)
+    temps = np.linspace(300, 3000, 250)
     ci = CollisionIntegral()
 
     gupta_yos_n2_11 = ci.construct_ci(ci_type="gupta_yos", curve_fit_type="pi_Omega",
@@ -25,22 +25,33 @@ def ci_comparison_n2():
     laricchiuta_n2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=1.71, N=8)
     laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=1.71, N=8)
 
+    wright_n2_n2_eval = wright_et_al_n2_11.eval(temps)
     fig, ax = plt.subplots(2, 1, sharex=True)
     fig.suptitle("$N_2 - N_2 $ collision integrals")
-    ax[0].plot(temps, gupta_yos_n2_11.eval(temps), 'k-.', label="Gupta, Yos, Thomas (Eilmer)")
-    ax[0].plot(temps, wright_et_al_n2_11.eval(temps), 'k--', label="Wright et al")
     ax[0].plot(temps, laricchiuta_n2_n2_11.eval(temps), 'k', label="Laricchiuta")
+    ax[0].plot(temps, gupta_yos_n2_11.eval(temps), 'k:', label="Gupta, Yos, Thomas (Eilmer)")
+    ax[0].plot(temps, wright_n2_n2_eval, 'k--', label="Wright et al")
+    ax[0].fill_between(temps,
+                       wright_n2_n2_eval - wright_n2_n2_eval*0.1,
+                       wright_n2_n2_eval + wright_n2_n2_eval*0.1, alpha=0.5,
+                       label="Wright et al uncertainty")
     ax[0].set_ylabel("$\\Omega^{(1,1)}$, $\\AA^2$")
     ax[0].legend()
-    ax[1].plot(temps, gupta_yos_n2_22.eval(temps), 'k-.', label="Gupta, Yos, Thomas (Eilmer)")
-    ax[1].plot(temps, wright_et_al_n2_22.eval(temps), 'k--', label="Wright et al")
+    ax[0].set_ylim(bottom=0)
+    ax[0].grid()
+    wright_eval = wright_et_al_n2_22.eval(temps)
     ax[1].plot(temps, laricchiuta_n2_n2_22.eval(temps), 'k', label="Laricchiuta")
+    ax[1].plot(temps, gupta_yos_n2_22.eval(temps), 'k:', label="Gupta, Yos, Thomas (Eilmer)")
+    ax[1].plot(temps, wright_eval, 'k--', label="Wright et al")
+    ax[1].fill_between(temps, 0.9*wright_eval, 1.1*wright_eval, label="Wright et al uncertainty", alpha=0.5)
     ax[1].set_ylabel("$\\Omega^{(2,2)}$, $\\AA^2$")
     ax[1].set_xlabel("Temperature, K")
-    fig.savefig("./N2_N2_comparison.png")
+    ax[1].set_ylim(bottom=0)
+    ax[1].grid()
+    fig.savefig("../04_talks/collision_integrals/figs/N2_N2_comparison.png")
 
 def ci_comparison_co2():
-    temps = np.linspace(300, 30000, 250)
+    temps = np.linspace(300, 3000, 250)
     ci = CollisionIntegral()
 
     # wright collision integrals curve fitted
@@ -48,17 +59,18 @@ def ci_comparison_co2():
 
     # Laricchiuta collision integrals for co2:n2
     laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,
-                                            alphas=[2.507, 1.71], Ns=[10, 8])
+                                            alphas=[2.507, 1.71], Ns=[16, 10])
     laricchiuta_co2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1,
-                                            alphas=[2.507, 1.71], Ns=[10, 8])
+                                            alphas=[2.507, 1.71], Ns=[16, 10])
 
-    laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=10)
-    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=10)
+    laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=16)
+    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=2.507, N=16)
 
     laricchiuta_omega_co2_co2_11 = laricchiuta_co2_co2_11.eval(temps)
     laricchiuta_omega_co2_n2_11 = laricchiuta_co2_n2_11.eval(temps)
-    laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_11.eval(temps)
-    laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_11.eval(temps)
+    laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_22.eval(temps)
+    laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_22.eval(temps)
+
     wright_omega_co2_co2_11 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_11").eval(temps)
     wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(temps)
     wright_omega_co2_n2_11 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_11").eval(temps)
@@ -66,27 +78,46 @@ def ci_comparison_co2():
 
     fig_co2_co2, ax_co2_co2 = plt.subplots(2, 1, sharex=True)
     fig_co2_co2.suptitle("$CO_2$ - $CO_2$ Collision Integrals")
-    ax_co2_co2[0].plot(temps, wright_omega_co2_co2_11, 'k--', label="Wright et al (Eilmer)")
     ax_co2_co2[0].plot(temps, laricchiuta_omega_co2_co2_11, 'k', label="Laricchiuta")
+    ax_co2_co2[0].plot(temps, wright_omega_co2_co2_11, 'k--', label="Wright et al (Eilmer)")
+    ax_co2_co2[0].fill_between(temps, wright_omega_co2_co2_11*0.8, wright_omega_co2_co2_11*1.2,
+                              alpha = 0.5, label="Wright et al. uncertainty")
     ax_co2_co2[0].set_ylabel("$\\Omega^{1,1}_{CO_2, CO_2}$, $\\AA^2$")
     ax_co2_co2[0].legend()
-    ax_co2_co2[1].plot(temps, wright_omega_co2_co2_22, 'k--', label="Wright et al (Eilmer)")
+    ax_co2_co2[0].set_ylim(bottom=0)
+    ax_co2_co2[0].grid()
+
     ax_co2_co2[1].plot(temps, laricchiuta_omega_co2_co2_22, 'k', label="Laricchiuta")
+    ax_co2_co2[1].plot(temps, wright_omega_co2_co2_22, 'k--', label="Wright et al (Eilmer)")
+    ax_co2_co2[1].fill_between(temps, wright_omega_co2_co2_22*0.8, wright_omega_co2_co2_22*1.2,
+                              alpha = 0.5, label="Wright et al. uncertainty")
     ax_co2_co2[1].set_xlabel("Temperature [K]")
     ax_co2_co2[1].set_ylabel("$\\Omega^{2,2}_{CO_2, CO_2}$, $\\AA^2$")
+    ax_co2_co2[1].set_ylim(bottom=0)
+    ax_co2_co2[1].grid()
 
     fig_co2_n2, ax_co2_n2 = plt.subplots(2, 1, sharex=True)
     fig_co2_n2.suptitle("$CO_2$ - $N_2$ Collision Integrals")
-    ax_co2_n2[0].plot(temps, wright_omega_co2_n2_11, 'k--', label="Wright et al")
     ax_co2_n2[0].plot(temps, laricchiuta_omega_co2_n2_11, 'k', label="Laricchiuta")
+    ax_co2_n2[0].plot(temps, wright_omega_co2_n2_11, 'k--', label="Wright et al")
+    ax_co2_n2[0].fill_between(temps, wright_omega_co2_n2_11*0.8, wright_omega_co2_n2_11*1.2,
+                              alpha = 0.5, label="Wright et al. uncertainty")
     ax_co2_n2[0].set_ylabel("$\\Omega^{1,1}_{CO_2, N_2}$, $\\AA^2$")
     ax_co2_n2[0].legend()
-    ax_co2_n2[1].plot(temps, wright_omega_co2_n2_22, 'k--', label="Wright et al")
+    ax_co2_n2[0].set_ylim(bottom=0)
+    ax_co2_n2[0].grid()
+
     ax_co2_n2[1].plot(temps, laricchiuta_omega_co2_n2_22, 'k', label="Laricchiuta")
+    ax_co2_n2[1].plot(temps, wright_omega_co2_n2_22, 'k--', label="Wright et al")
+    ax_co2_n2[1].fill_between(temps, wright_omega_co2_n2_22*0.8, wright_omega_co2_n2_22*1.2,
+                              alpha = 0.5, label="Wright et al. uncertainty")
     ax_co2_n2[1].set_xlabel("Temperature [K]")
     ax_co2_n2[1].set_ylabel("$\\Omega^{2,2}_{CO_2, N_2}$, $\\AA^2$")
-    fig_co2_co2.savefig("./CO2_CO2_comparison.png")
-    fig_co2_n2.savefig("./CO2_N2_comparison.png")
+    ax_co2_n2[1].set_ylim(bottom=0)
+    ax_co2_n2[1].grid()
+
+    fig_co2_co2.savefig("../04_talks/collision_integrals/figs/CO2_CO2_comparison.png")
+    fig_co2_n2.savefig("../04_talks/collision_integrals/figs/CO2_N2_comparison.png")
 
 def plot_curve_fit_data():
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")

@@ -44,12 +44,76 @@ class ColIntModel(ABC):
     """ Base class for collision integral models """
 
     @abstractmethod
-    def eval(self, temp):
+    def eval(self, temp, *args):
         pass
 
 def lennard_jones(radius, sigma, epsilon):
     """ compute the Lennard Jones potential at some separation """
     return 4 * epsilon * ((sigma/radius)**12 - (sigma/radius)**6)
+
+def psi(s):
+    """ Compute Psi(s) """
+    if s == 1:
+        return 0.0
+    else:
+        tmp = 0
+        for n in range(1, s):
+            tmp += 1/n
+        return tmp
+
+def gamma_function(s):
+    """ Compute the gamma function for integer values of s """
+    if s <= 2:
+        return 1.0
+    else:
+        return np.prod(np.arange(2, s))
+
+
+class GhoruiColInt(ColIntModel):
+    """
+    Charged - charged collision integrals, from Ghorui and Das 2013
+    """
+
+    _gamma = 0.5772
+    _beta = 1.0
+    _epsilon = 1.0
+    _epsilon_0 = 8.854e-12
+    _e = 1.602e-19
+    _k_B = 1.38e-23
+
+    def __init__(self, **kwargs):
+        mass = kwargs["mass"]
+        charge = kwargs["charge"]
+        self._gas_state = kwargs["gas_state"]
+        self._l, self._s = kwargs["l"], kwargs["s"]
+
+        if self._l == 1:
+            self._l_term = 0.5
+        elif self._l == 2:
+            self._l_term = 1.0
+        else:
+            raise ValueError(f"l={self._l} not supported")
+
+        self._m_star = mass[0] * mass[1] / (mass[0] + mass[1])
+
+    def _compute_screening_distance(self):
+        """ Calculate the screening distance """
+
+        pre_factor = self._e**2 / self._epsilon_0 / self._k_B / self._gas_state["Te"]
+        tmp = self._gas_state["e-"]
+        for species in self._gas_state.items():
+            tmp += species["charge"]**2 * species["num_den"]
+        return pre_factor * tmp
+
+    def eval(temp, *args):
+        self._temp_star = (mass[0] * temp[1] + mass[1] * temp[0]) / (mass[0] + mass[1])
+        delta = self._beta * (1/4/np.pi/self._epsilon
+                              * charge[0]*charge[1] * self._e**2 / self._k_B / self._temp_star)
+        self._b_0 = delta / 2 / self._beta
+        pre_factor = np.sqrt(2 * np.pi * self._k_B * self._temp_star / self._m_star)
+        pre_factor *= self._beta**2 * self._b_0**2 * gamma_function(self._s)
+        log_Lambda = np.log(2 * self._compute_screening_distance / self._beta / self._b_0)
+        return pre_factor * (log_Lambda - self._l_term - 2 * self._gamma + psi(self._s))
 
 
 class NumericCollisionIntegral(ColIntModel):
@@ -395,6 +459,7 @@ class CollisionIntegral:
         "gupta_yos": ColIntGuptaYos,
         "curve_fit": ColIntCurveFit,
         "numerical": NumericCollisionIntegral,
+        "ghoruiColInt": GhoruiColInt,
     }
 
     def construct_ci(self, **kwargs):
