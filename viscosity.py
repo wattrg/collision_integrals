@@ -6,7 +6,7 @@ from data.wright_ci_data import wright_ci_data
 from collision_integrals import CollisionIntegral, ColIntCurveFitCollection
 
 NA = 6.022e23
-kB = 1.38e-23
+kB = 1.38e-16
 def viscosity(T, ci, molar_mass):
     return 2.6693e-5 * unp.sqrt(molar_mass * T) / ci
 
@@ -89,7 +89,7 @@ def plot_n2_viscosity():
     ax.set_title("$N_2$ viscosity")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     ax.grid()
-    plt.savefig("../04_talks/collision_integrals/figs/N2_viscosity.png")
+    plt.savefig("./figs/N2_viscosity.png")
 
 def plot_co2_viscosity():
     ci = CollisionIntegral()
@@ -119,7 +119,7 @@ def plot_co2_viscosity():
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     ax.set_title("$CO_2$ viscosity")
     ax.grid()
-    plt.savefig("../04_talks/collision_integrals/figs/CO2_viscosity.png")
+    plt.savefig("./figs/CO2_viscosity.png")
 
 if __name__ == "__main__":
     plot_n2_viscosity()

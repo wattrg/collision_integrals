@@ -69,6 +69,56 @@ def gamma_function(s):
         return np.prod(np.arange(2, s))
 
 
+class MasonColInt(ColIntModel):
+    """
+    Model for collision integrals between charged particles
+    """
+
+    _e = 4.803e-10
+    _k_B = 1.3806e-16
+
+    def __init__(self, **kwargs):
+        charge = kwargs["charge"]
+        self._l = kwargs["l"]
+        self._s = kwargs["s"]
+        assert(self._l == self._s)
+
+        if charge[0] * charge[1] > 0:
+            if self._l == 1:
+                self._Cn = 0.138
+                self._cn = 0.0106
+                self._Dn = 0.765
+            elif self._l == 2:
+                self._Cn = 0.157
+                self._cn = 0.0274
+                self._Dn = 1.235
+
+        elif charge[0] * charge[1] < 0:
+            if self._l == 1:
+                self._Cn = -0.476
+                self._cn = 0.0313
+                self._Dn = 0.784
+            elif self._l == 2:
+                self._Cn = -0.146
+                self._cn = 0.0377
+                self._Dn = 1.262
+        else:
+            raise ValueError("Mason Collision integral not valid for neutral particles")
+
+    def _debye_length(self, gas_state):
+        temp = gas_state["temp"]
+        return np.sqrt(self._k_B * temp / (4 * np.pi * gas_state["ne"] * self._e**2))
+
+    def _temp_star(self, gas_state):
+        return self._debye_length(gas_state) * self._k_B * gas_state["temp"] / self._e**2
+
+    def eval(self, gas_state):
+        temp_star = self._temp_star(gas_state)
+        debye = self._debye_length(gas_state)
+        log_term = np.log(self._Dn * temp_star * (1 - self._Cn*np.exp(-self._cn * temp_star))+1)
+        return 5e15 * (debye / temp_star)**2 * log_term
+
+
 class GhoruiColInt(ColIntModel):
     """
     Charged - charged collision integrals, from Ghorui and Das 2013
@@ -222,59 +272,6 @@ class NumericCollisionIntegral(ColIntModel):
 
     def eval(self, temp):
         pass
-
-class DimensionlessColIntHCB(ColIntModel):
-    """
-    Collision integrals calculated using the non-dimensional collision integrals
-    from Hirschfelder, Curtiss, and Bird (1964) appendix I-M (page 1126)
-    """
-    # Boltzmann's consant
-    k_B = 1.3806e-3 # angstrom^2 kg s^-2 K^-1
-
-    # Avagradro's number
-    N_A = 6.022e23
-
-    def __init__(self, **kwargs):
-        # warn the user this isn't ready yet
-        print("Warning: HCB collision integrals may not be correct...")
-
-        # order of the collision integral
-        self.l = kwargs["l"]
-        self.s = kwargs["s"]
-
-        # set L-J potential parmeters
-        self._sigma = kwargs["sigma"]
-        self._epsilon = kwargs["epsilon"]
-
-        # reduced mass
-        self._mu = kwargs["mu"]
-
-        # get the non-dimensional collision integral data
-        temp_star = hcb_ci_data[:, 0]
-        if self.l == 1 and self.s == 1:
-            omega_star = hcb_ci_data[:, 1]
-        elif self.l == 2 and self.s == 2:
-            omega_star = hcb_ci_data[:, 2]
-        else:
-            raise ValueError((l, s))
-
-        # non-dimensionalise the collision integrals
-        temps = temp_star * self._epsilon
-        factor = 0.5 * factorial((self.s + 1)) * (1 - 0.5 * ((1 + (-1)**self.l)/(1 + self.l)))
-        mass_factor = np.sqrt(2 * np.pi * self._mu / (self.k_B * temps))
-        omega = factor * np.pi * self._sigma**2 * omega_star * mass_factor
-
-        # interpolate the data
-        self._omega_interp = interpolate.interp1d(temps, omega, kind="quadratic")
-
-    def eval(self, temp):
-        return self._omega_interp(temp)
-
-    def get_sigma(self):
-        return self._sigma
-
-    def get_epsilon(self):
-        return self._epsilon
 
 
 class ColIntLaricchiuta(ColIntModel):
@@ -454,12 +451,11 @@ class ColIntGuptaYos(ColIntCurveFit):
 class CollisionIntegral:
     """ Factory class for collision integrals """
     CI_TYPES = {
-        "hcb": DimensionlessColIntHCB,
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
         "curve_fit": ColIntCurveFit,
         "numerical": NumericCollisionIntegral,
-        "ghoruiColInt": GhoruiColInt,
+        "mason": MasonColInt,
     }
 
     def construct_ci(self, **kwargs):
@@ -496,12 +492,13 @@ class ColIntCurveFitCollection:
 
 if __name__ == "__main__":
     ci = CollisionIntegral().construct_ci(
-        ci_type="laricchiuta",
+        ci_type="mason",
         l=1,
         s=1,
-        sigma=3.829,
-        epsilon=144,
-        beta=8.0746
+        charge=(-1, -1)
     )
-    print(ci.get_coeffs())
-    print(ci.eval(10000))
+    gas_state = {"ne": 1e25, "temp": 1000}
+    print("collision integral = ", ci.eval(gas_state))
+    print("temp star = ", ci._temp_star(gas_state))
+    print("debye length = ", ci._debye_length(gas_state))
+    print("temp star square * ci = ", ci.eval(gas_state) * ci._temp_star(gas_state)**2)

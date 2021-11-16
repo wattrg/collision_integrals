@@ -48,7 +48,7 @@ def ci_comparison_n2():
     ax[1].set_xlabel("Temperature, K")
     ax[1].set_ylim(bottom=0)
     ax[1].grid()
-    fig.savefig("../04_talks/collision_integrals/figs/N2_N2_comparison.png")
+    fig.savefig("./figs/N2_N2_comparison.png")
 
 def ci_comparison_co2():
     temps = np.linspace(300, 3000, 250)
@@ -116,8 +116,8 @@ def ci_comparison_co2():
     ax_co2_n2[1].set_ylim(bottom=0)
     ax_co2_n2[1].grid()
 
-    fig_co2_co2.savefig("../04_talks/collision_integrals/figs/CO2_CO2_comparison.png")
-    fig_co2_n2.savefig("../04_talks/collision_integrals/figs/CO2_N2_comparison.png")
+    fig_co2_co2.savefig("./figs/CO2_CO2_comparison.png")
+    fig_co2_n2.savefig("./figs/CO2_N2_comparison.png")
 
 def plot_curve_fit_data():
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
