@@ -525,7 +525,16 @@ class ColIntCurveFitCollection:
 
 
 def collision_integral(ci_type, **kwargs):
-    """ Factory for collision integrals """
+    """
+    Create a collision integral
+
+    Parameters:
+        ci_type (string): The type of collision integral
+
+    Returns:
+        ci: A concrete collision integral instsance
+
+    """
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
@@ -540,10 +549,10 @@ def collision_integral(ci_type, **kwargs):
 if __name__ == "__main__":
     ci = collision_integral(
         "mason",
-        (1, 1),
+        order=(1, 1),
         charge=(-1, -1)
     )
-    gas_state = {"ne": 1e25, "temp": 1000}
+    gas_state = {"ne": 1e20, "temp": 1000}
     print("collision integral = ", ci.eval(gas_state))
     print("temp star = ", ci._temp_star(gas_state))
     print("debye length = ", ci._debye_length(gas_state))

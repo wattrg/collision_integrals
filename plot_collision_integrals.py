@@ -4,6 +4,7 @@ import numpy as np
 from data.hcb_ci_data import hcb_ci_data
 from data.wright_ci_data import wright_ci_data
 
+
 def ci_comparison_n2():
     """
     Compare the collision integrals as computed by Gupta Yos and Wright et. al.
@@ -47,7 +48,7 @@ def ci_comparison_n2():
     ax[1].set_xlabel("Temperature, K")
     ax[1].set_ylim(bottom=0)
     ax[1].grid()
-    fig.savefig("./figs/N2_N2_comparison.png")
+    fig.savefig("./figs/N2_N2_comparison.svg", dpi=1200)
 
 def ci_comparison_co2():
     temps = np.linspace(300, 3000, 250)
@@ -114,8 +115,8 @@ def ci_comparison_co2():
     ax_co2_n2[1].set_ylim(bottom=0)
     ax_co2_n2[1].grid()
 
-    fig_co2_co2.savefig("./figs/CO2_CO2_comparison.png")
-    fig_co2_n2.savefig("./figs/CO2_N2_comparison.png")
+    fig_co2_co2.savefig("./figs/CO2_CO2_comparison.svg", dpi=1200)
+    fig_co2_n2.savefig("./figs/CO2_N2_comparison.svg", dpi=1200)
 
 def ne_from_ep(gas_state):
         kB = 1.38066e-23
@@ -125,7 +126,7 @@ def ne_from_ep(gas_state):
 
 def plot_N2p_N2p_interaction():
     gupta_n2p_n2p_11 = collision_integral("gupta_yos", charge=(1,1), order=(1,1),
-                                       curve_fit_type="pi_Omega",
+                                       curve_fit_type="Omega",
                                        coeffs=[0.1251, -3.5134, 31.2277, -80.6515])
     gupta_n2p_n2p_22 = collision_integral("gupta_yos", charge=(1,1), order=(2,2),
                                        curve_fit_type="pi_Omega",
@@ -137,13 +138,13 @@ def plot_N2p_N2p_interaction():
     gas_state = {"temp": temps, "ep": 1}
     ne_from_ep(gas_state)
     fig, ax = plt.subplots(2, 1, sharex=True)
-    #ax[0].plot(temps, gupta_n2p_n2p_11.eval(gas_state), 'k',
-    #           label="Gupta et al")
+    ax[0].plot(temps, gupta_n2p_n2p_11.eval(gas_state), 'k',
+               label="Gupta et al")
     ax[0].plot(temps, mason_n2p_n2p_11.eval(gas_state), 'k--', label="Mason")
     ax[0].set_ylabel("$\\Omega^{(1,1)}$")
     ax[0].legend()
-    #ax[1].plot(temps, gupta_n2p_n2p_22.eval(gas_state), 'k',
-    #           label="Gupta et al")
+    ax[1].plot(temps, gupta_n2p_n2p_22.eval(gas_state), 'k',
+               label="Gupta et al")
     ax[1].plot(temps, mason_n2p_n2p_22.eval(gas_state), 'k--', label="Mason")
     ax[1].set_ylabel("$\\Omega^{(2,2)}$")
 
