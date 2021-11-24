@@ -16,6 +16,33 @@ from data.wright_ci_data import wright_ci_data
 from data.Laricchiuta import laricchiuta_coeffs
 from abc import ABC, abstractmethod
 
+
+class ColIntModel(ABC):
+    """ Base class for collision integral models """
+    def __init__(self, **kwargs):
+        try:
+            order = kwargs["order"]
+            self._l, self._s = order[0], order[1]
+        except KeyError:
+            raise AttributeError("The order of the collision integral must be supplied")
+
+    def get_order(self):
+        return self._l, self._s
+
+    @abstractmethod
+    def eval(self, gas_state):
+        """
+        Evaluate the collision integral
+
+        Parameters:
+            gas_state (Dict): The gas state to evaluate the collision integral at
+
+        Returns:
+            ci (float): The evaluated collision integral
+        """
+        pass
+
+
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
     """
        The functional form to fit the data to. Note that a division by
@@ -37,15 +64,6 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
     log_T = np.log(temp)
     return np.exp(d_ii) * \
         np.power(temp, a_ii * log_T**2 + b_ii * log_T + c_ii)
-
-
-
-class ColIntModel(ABC):
-    """ Base class for collision integral models """
-
-    @abstractmethod
-    def eval(self, gas_state, *args):
-        pass
 
 def lennard_jones(radius, sigma, epsilon):
     """ compute the Lennard Jones potential at some separation """
@@ -72,20 +90,20 @@ def gamma_function(s):
 class MasonColInt(ColIntModel):
     """
     Model for collision integrals between charged particles.
-    The model assumes a shielded coulomb potential
+    The model assumes a shielded coulomb potential, and evaluates a curve fit
 
-    Ref: Transport Coefficients of Ionized Gases, Mason, Munn, Smith
+    Ref: "Transport Coefficients of Ionized Gases" by Mason, Munn, Smith
     """
 
-    _e = 4.803e-10
-    _k_B = 1.3806e-16
+    _e = 4.803e-10 # electron charge (esu)
+    _k_B = 1.3806e-16 # Boltzmann's constant (erg/K)
 
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         charge = kwargs["charge"]
-        self._l = kwargs["l"]
-        self._s = kwargs["s"]
-        assert self._l == self._s, "Currently "
+        assert self._l == self._s, "l must equal s"
 
+        # select curve fit parameters
         if charge[0] * charge[1] > 0:
             if self._l == 1:
                 self._Cn = 0.138
@@ -110,10 +128,12 @@ class MasonColInt(ColIntModel):
 
     def _debye_length(self, gas_state):
         temp = gas_state["temp"]
-        return np.sqrt(self._k_B * temp / (4 * np.pi * gas_state["ne"] * self._e**2))
+        ne = gas_state["ne"]
+        return np.sqrt(self._k_B * temp / (4 * np.pi * ne * self._e**2))
 
     def _temp_star(self, gas_state):
-        return self._debye_length(gas_state) * self._k_B * gas_state["temp"] / self._e**2
+        temp = gas_state["temp"]
+        return self._debye_length(gas_state) * self._k_B * temp / self._e**2
 
     def eval(self, gas_state):
         temp_star = self._temp_star(gas_state)
@@ -135,6 +155,7 @@ class GhoruiColInt(ColIntModel):
     _k_B = 1.38e-23
 
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         mass = kwargs["mass"]
         charge = kwargs["charge"]
         self._gas_state = kwargs["gas_state"]
@@ -176,7 +197,8 @@ class NumericCollisionIntegral(ColIntModel):
         "lennard_jones": lennard_jones,
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, order, **kwargs):
+        super().__init__(order)
         if callable(kwargs["potential"]):
             self._potential_func = kwargs["potential"]
         else:
@@ -184,8 +206,6 @@ class NumericCollisionIntegral(ColIntModel):
         self._epsilon = kwargs["epsilon"]
         self._sigma = kwargs["sigma"]
         self._mu = kwargs["mu"]
-        self._l = kwargs["l"]
-        self._s = kwargs["s"]
 
     def _potential(self, radius):
         """ Evaluate the potential at the particular radius """
@@ -282,12 +302,12 @@ class ColIntLaricchiuta(ColIntModel):
     Dimensionless collision integrals from Laricchiuta et al:
     Classical transport collision integrals for a Lennard-Jones like
     phenomenological model potential 2007
+
+    Good for neutral/neutral or neutral/ion collisions
     """
 
     def __init__(self, **kwargs):
-        # order of collision integral
-        self._l = kwargs["l"]
-        self._s = kwargs["s"]
+        super().__init__(**kwargs)
 
         # type of particles colliding
         self._col_type = kwargs.get("col_type", "neutral-neutral")
@@ -374,6 +394,7 @@ class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._charge = kwargs.get("charge", (0, 0))
         if "cis" in kwargs:
             self._temps = kwargs["temps"]
@@ -442,9 +463,10 @@ class ColIntCurveFit:
         curve_fit_type = kwargs["curve_fit_type"]
         temps = kwargs["temps"]
         cis = kwargs["cis"]
+        order = kwargs["order"]
         if curve_fit_type not in cls.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](temps=temps, cis=cis)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](order=order, temps=temps, cis=cis)
 
 
 class ColIntGuptaYos(ColIntCurveFit):
@@ -456,9 +478,10 @@ class ColIntGuptaYos(ColIntCurveFit):
     def __new__(cls, **kwargs):
         curve_fit_type = kwargs["curve_fit_type"]
         coeffs = kwargs["coeffs"]
+        order = kwargs["order"]
         if curve_fit_type not in cls.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](coeffs=coeffs)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](order=order, coeffs=coeffs)
 
 
 class ColIntCurveFitCollection:
@@ -482,8 +505,11 @@ class ColIntCurveFitCollection:
                     charge[i] = -1
 
             for ii in ["11", "22"]:
+                # extract the numeric order from the string representation
+                l = int(ii[0])
                 self._ci_coeffs[pair][f"Omega_{ii}"] = ColIntCurveFit(
                     curve_fit_type=self._curve_fit_type,
+                    order=(l,l),
                     temps=pair_ci[f"Omega_{ii}"]["temps"],
                     cis=pair_ci[f"Omega_{ii}"]["cis"],
                     charge=charge,
@@ -512,10 +538,9 @@ def collision_integral(ci_type, **kwargs):
 
 
 if __name__ == "__main__":
-    ci = CollisionIntegral().construct_ci(
-        ci_type="mason",
-        l=1,
-        s=1,
+    ci = collision_integral(
+        "mason",
+        (1, 1),
         charge=(-1, -1)
     )
     gas_state = {"ne": 1e25, "temp": 1000}
