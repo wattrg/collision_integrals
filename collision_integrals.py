@@ -354,7 +354,8 @@ class ColIntLaricchiuta(ColIntModel):
         """ Return a_i(beta) """
         return self._coeffs
 
-    def eval(self, temp):
+    def eval(self, gas_state):
+        temp = gas_state["temp"]
         temp_star = temp / self._epsilon
         if np.any(temp_star < 2e-4) or np.any(temp_star > 1e3):
             raise ValueError("Temperature outside of valid range")
@@ -370,6 +371,7 @@ class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, **kwargs):
+        self._charge = kwargs.get("charge", (0, 0))
         if "cis" in kwargs:
             self._temps = kwargs["temps"]
             self._cis = kwargs["cis"]
@@ -394,8 +396,17 @@ class ColIntCurveFitModel(ColIntModel):
         self._c = c
         self._d = d
 
-    def eval(self, temp):
-        return self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
+    def eval(self, gas_state):
+        temp = gas_state["temp"]
+        col_int = self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
+        if self._charge[0] * self._charge[1] != 0:
+            # charged collision, so need to correct for electron pressure
+            pe = gas_state["pe"]
+            correction = np.log(2.09e-2 * (temp/(1000*pe**0.25))**4
+                                + 1.52*(temp/(1000*pe**0.25))**(8/3))
+            correction /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
+            col_int *= correction
+        return col_int
 
     def __repr__(self):
         return f"[a={self._a}, b={self._b}, c={self._c}, d={self._d}]"
@@ -448,7 +459,7 @@ class ColIntGuptaYos(ColIntCurveFit):
 
 
 
-class CollisionIntegral:
+def collision_integral(ci_type, **kwargs):
     """ Factory class for collision integrals """
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
@@ -458,9 +469,7 @@ class CollisionIntegral:
         "mason": MasonColInt,
     }
 
-    def construct_ci(self, **kwargs):
-        ci_type = kwargs["ci_type"]
-        return self.CI_TYPES[ci_type](**kwargs)
+    return CI_TYPES[ci_type](**kwargs)
 
 
 class ColIntCurveFitCollection:
@@ -474,11 +483,21 @@ class ColIntCurveFitCollection:
         self._ci_coeffs = {}
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
+
+            # check if both species are charged
+            charge = [0, 0]
+            for i in range(2):
+                if "+" in pair[i]:
+                    charge[i] = 1
+                if "-" in pair[i]:
+                    charge[i] = -1
+
             for ii in ["11", "22"]:
                 self._ci_coeffs[pair][f"Omega_{ii}"] = ColIntCurveFit(
                     curve_fit_type=self._curve_fit_type,
                     temps=pair_ci[f"Omega_{ii}"]["temps"],
-                    cis=pair_ci[f"Omega_{ii}"]["cis"]
+                    cis=pair_ci[f"Omega_{ii}"]["cis"],
+                    charge=charge,
                 )
 
     def get_col_ints(self, pair=None, ci_type=None):

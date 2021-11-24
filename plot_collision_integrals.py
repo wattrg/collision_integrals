@@ -1,4 +1,4 @@
-from collision_integrals import CollisionIntegral, ColIntCurveFitCollection
+from collision_integrals import collision_integral, ColIntCurveFitCollection
 import matplotlib.pyplot as plt
 import numpy as np
 from data.hcb_ci_data import hcb_ci_data
@@ -10,26 +10,25 @@ def ci_comparison_n2():
     """
 
     temps = np.linspace(300, 3000, 250)
-    ci = CollisionIntegral()
 
-    gupta_yos_n2_11 = ci.construct_ci(ci_type="gupta_yos", curve_fit_type="pi_Omega",
+    gupta_yos_n2_11 = collision_integral("gupta_yos", curve_fit_type="pi_Omega",
                                    coeffs=[0.0, -0.0112, -0.1182, 4.8464])
-    wright_et_al_n2_11 = ci.construct_ci(ci_type="curve_fit", curve_fit_type="Omega",
+    wright_et_al_n2_11 = collision_integral("curve_fit", curve_fit_type="Omega",
                                    temps=wright_ci_data["N2:N2"]["Omega_11"]["temps"],
                                    cis=wright_ci_data["N2:N2"]["Omega_11"]["cis"])
-    gupta_yos_n2_22 = ci.construct_ci(ci_type="gupta_yos", curve_fit_type="pi_Omega",
+    gupta_yos_n2_22 = collision_integral("gupta_yos", curve_fit_type="pi_Omega",
                                    coeffs=[0.0, -0.0203, 0.0683, 4.09])
-    wright_et_al_n2_22 = ci.construct_ci(ci_type="curve_fit", curve_fit_type="Omega",
+    wright_et_al_n2_22 = collision_integral("curve_fit", curve_fit_type="Omega",
                                    temps=wright_ci_data["N2:N2"]["Omega_22"]["temps"],
                                    cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"])
-    laricchiuta_n2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=1.71, N=8)
-    laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=1.71, N=8)
+    laricchiuta_n2_n2_11 = collision_integral("laricchiuta", l=1, s=1, alpha=1.71, N=8)
+    laricchiuta_n2_n2_22 = collision_integral("laricchiuta", l=2, s=2, alpha=1.71, N=8)
 
-    wright_n2_n2_eval = wright_et_al_n2_11.eval(temps)
+    wright_n2_n2_eval = wright_et_al_n2_11.eval({"temp": temps})
     fig, ax = plt.subplots(2, 1, sharex=True)
     fig.suptitle("$N_2 - N_2 $ collision integrals")
-    ax[0].plot(temps, laricchiuta_n2_n2_11.eval(temps), 'k', label="Laricchiuta")
-    ax[0].plot(temps, gupta_yos_n2_11.eval(temps), 'k:', label="Gupta et al (Eilmer)")
+    ax[0].plot(temps, laricchiuta_n2_n2_11.eval({"temp": temps}), 'k', label="Laricchiuta")
+    ax[0].plot(temps, gupta_yos_n2_11.eval({"temp": temps}), 'k:', label="Gupta et al (Eilmer)")
     ax[0].plot(temps, wright_n2_n2_eval, 'k--', label="Wright et al")
     ax[0].fill_between(temps,
                        wright_n2_n2_eval - wright_n2_n2_eval*0.1,
@@ -39,9 +38,9 @@ def ci_comparison_n2():
     ax[0].legend()
     ax[0].set_ylim(bottom=0)
     ax[0].grid()
-    wright_eval = wright_et_al_n2_22.eval(temps)
-    ax[1].plot(temps, laricchiuta_n2_n2_22.eval(temps), 'k', label="Laricchiuta")
-    ax[1].plot(temps, gupta_yos_n2_22.eval(temps), 'k:', label="Gupta et al (Eilmer)")
+    wright_eval = wright_et_al_n2_22.eval({"temp": temps})
+    ax[1].plot(temps, laricchiuta_n2_n2_22.eval({"temp": temps}), 'k', label="Laricchiuta")
+    ax[1].plot(temps, gupta_yos_n2_22.eval({"temp": temps}), 'k:', label="Gupta et al (Eilmer)")
     ax[1].plot(temps, wright_eval, 'k--', label="Wright et al")
     ax[1].fill_between(temps, 0.9*wright_eval, 1.1*wright_eval, label="Wright et al uncertainty", alpha=0.5)
     ax[1].set_ylabel("$\\Omega^{(2,2)}$, $\\AA^2$")
@@ -52,29 +51,28 @@ def ci_comparison_n2():
 
 def ci_comparison_co2():
     temps = np.linspace(300, 3000, 250)
-    ci = CollisionIntegral()
 
     # wright collision integrals curve fitted
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
 
     # Laricchiuta collision integrals for co2:n2
-    laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,
+    laricchiuta_co2_n2_22 = collision_integral("laricchiuta", l=2, s=2,
                                             alphas=[2.507, 1.71], Ns=[16, 10])
-    laricchiuta_co2_n2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1,
+    laricchiuta_co2_n2_11 = collision_integral("laricchiuta", l=1, s=1,
                                             alphas=[2.507, 1.71], Ns=[16, 10])
 
-    laricchiuta_co2_co2_11 = ci.construct_ci(ci_type="laricchiuta", l=1, s=1, alpha=2.507, N=16)
-    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=2.507, N=16)
+    laricchiuta_co2_co2_11 = collision_integral("laricchiuta", l=1, s=1, alpha=2.507, N=16)
+    laricchiuta_co2_co2_22 = collision_integral("laricchiuta", l=2, s=2, alpha=2.507, N=16)
 
-    laricchiuta_omega_co2_co2_11 = laricchiuta_co2_co2_11.eval(temps)
-    laricchiuta_omega_co2_n2_11 = laricchiuta_co2_n2_11.eval(temps)
-    laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_22.eval(temps)
-    laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_22.eval(temps)
+    laricchiuta_omega_co2_co2_11 = laricchiuta_co2_co2_11.eval({"temp": temps})
+    laricchiuta_omega_co2_n2_11 = laricchiuta_co2_n2_11.eval({"temp": temps})
+    laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_22.eval({"temp": temps})
+    laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_22.eval({"temp": temps})
 
-    wright_omega_co2_co2_11 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_11").eval(temps)
-    wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(temps)
-    wright_omega_co2_n2_11 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_11").eval(temps)
-    wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_22").eval(temps)
+    wright_omega_co2_co2_11 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_11").eval({"temp": temps})
+    wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval({"temp": temps})
+    wright_omega_co2_n2_11 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_11").eval({"temp": temps})
+    wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_22").eval({"temp": temps})
 
     fig_co2_co2, ax_co2_co2 = plt.subplots(2, 1, sharex=True)
     fig_co2_co2.suptitle("$CO_2$ - $CO_2$ Collision Integrals")
@@ -119,6 +117,37 @@ def ci_comparison_co2():
     fig_co2_co2.savefig("./figs/CO2_CO2_comparison.png")
     fig_co2_n2.savefig("./figs/CO2_N2_comparison.png")
 
+def ne_from_ep(gas_state):
+        kB = 1.38066e-23
+        temp = gas_state["temp"]
+        pressure = gas_state["ep"]
+        gas_state["ne"] = pressure / (kB * temp)
+
+def plot_N2p_N2p_interaction():
+    gupta_n2p_n2p_11 = collision_integral("gupta_yos", charge=(1,1),
+                                       curve_fit_type="pi_Omega",
+                                       coeffs=[0.1251, -3.5134, 31.2277, -80.6515])
+    gupta_n2p_n2p_22 = collision_integral("gupta_yos", charge=(1,1),
+                                       curve_fit_type="pi_Omega",
+                                       coeffs=[0.1251, -3.5135, 31.2281, -80.1163])
+    mason_n2p_n2p_11 = collision_integral("mason", l=1, s=1, charge=(1, 1))
+    mason_n2p_n2p_22 = collision_integral("mason", l=2, s=2, charge=(2, 2))
+
+    temps = np.linspace(300, 15000, 150)
+    gas_state = {"temp": temps, "ep": 1}
+    ne_from_ep(gas_state)
+    fig, ax = plt.subplots(2, 1, sharex=True)
+    #ax[0].plot(temps, gupta_n2p_n2p_11.eval(gas_state), 'k',
+    #           label="Gupta et al")
+    ax[0].plot(temps, mason_n2p_n2p_11.eval(gas_state), 'k--', label="Mason")
+    ax[0].set_ylabel("$\\Omega^{(1,1)}$")
+    ax[0].legend()
+    #ax[1].plot(temps, gupta_n2p_n2p_22.eval(gas_state), 'k',
+    #           label="Gupta et al")
+    ax[1].plot(temps, mason_n2p_n2p_22.eval(gas_state), 'k--', label="Mason")
+    ax[1].set_ylabel("$\\Omega^{(2,2)}$")
+
+
 def plot_curve_fit_data():
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
     co2_co2_ci = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_11")
@@ -135,9 +164,9 @@ def plot_curve_fit_data():
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel("$\\Omega^{(1,1)}_{CO_2, CO_2}$")
 
+
 def numeric_deflection_integrand(impact, rel_vel):
-    ci = CollisionIntegral()
-    numeric_ci = ci.construct_ci(ci_type="numerical",
+    numeric_ci = collision_integral("numerical",
                                  sigma=3.7, epsilon=244,
                                  l=1, s=1,
                                  potential="lennard_jones",
@@ -157,8 +186,7 @@ def numeric_deflection_angle(ci, impacts, rel_vel, n=100):
     return deflection
 
 def numeric_deflection_angles(rel_vels):
-    ci = CollisionIntegral()
-    numeric_ci = ci.construct_ci(ci_type="numerical",
+    numeric_ci = collision_integral("numerical",
                                  sigma=3.7, epsilon=244,
                                  l=1, s=1,
                                  potential="lennard_jones",
@@ -174,8 +202,7 @@ def numeric_deflection_angles(rel_vels):
     ax.set_ylabel("$1-\\cos\\Theta$")
 
 def plot_numeric_cross_section(l=1):
-    ci = CollisionIntegral()
-    numeric_ci = ci.construct_ci(ci_type="numerical",
+    numeric_ci = collision_integral("numerical",
                                  potential="lennard_jones",
                                  sigma=3.7, epsilon=244, mu=0.02,
                                  l=l, s=l)
@@ -186,6 +213,7 @@ if __name__ == "__main__":
     # plot_curve_fit_data()
     ci_comparison_co2()
     ci_comparison_n2()
+    plot_N2p_N2p_interaction()
 
     # numeric_deflection_integrand(17, 10)
     # numeric_deflection_angles([10, 100, 500])
