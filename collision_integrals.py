@@ -44,7 +44,7 @@ class ColIntModel(ABC):
     """ Base class for collision integral models """
 
     @abstractmethod
-    def eval(self, temp, *args):
+    def eval(self, gas_state, *args):
         pass
 
 def lennard_jones(radius, sigma, epsilon):
@@ -71,7 +71,10 @@ def gamma_function(s):
 
 class MasonColInt(ColIntModel):
     """
-    Model for collision integrals between charged particles
+    Model for collision integrals between charged particles.
+    The model assumes a shielded coulomb potential
+
+    Ref: Transport Coefficients of Ionized Gases, Mason, Munn, Smith
     """
 
     _e = 4.803e-10
@@ -81,7 +84,7 @@ class MasonColInt(ColIntModel):
         charge = kwargs["charge"]
         self._l = kwargs["l"]
         self._s = kwargs["s"]
-        assert(self._l == self._s)
+        assert self._l == self._s, "Currently "
 
         if charge[0] * charge[1] > 0:
             if self._l == 1:
@@ -155,7 +158,7 @@ class GhoruiColInt(ColIntModel):
             tmp += species["charge"]**2 * species["num_den"]
         return pre_factor * tmp
 
-    def eval(temp, *args):
+    def eval(self, gas_state):
         self._temp_star = (mass[0] * temp[1] + mass[1] * temp[0]) / (mass[0] + mass[1])
         delta = self._beta * (1/4/np.pi/self._epsilon
                               * charge[0]*charge[1] * self._e**2 / self._k_B / self._temp_star)
@@ -270,7 +273,7 @@ class NumericCollisionIntegral(ColIntModel):
                                         args=(rel_vel))
         return 2 * np.pi * integral
 
-    def eval(self, temp):
+    def eval(self, gas_state):
         pass
 
 
@@ -458,20 +461,6 @@ class ColIntGuptaYos(ColIntCurveFit):
         return cls.CURVE_FIT_TYPES[curve_fit_type](coeffs=coeffs)
 
 
-
-def collision_integral(ci_type, **kwargs):
-    """ Factory class for collision integrals """
-    CI_TYPES = {
-        "laricchiuta": ColIntLaricchiuta,
-        "gupta_yos": ColIntGuptaYos,
-        "curve_fit": ColIntCurveFit,
-        "numerical": NumericCollisionIntegral,
-        "mason": MasonColInt,
-    }
-
-    return CI_TYPES[ci_type](**kwargs)
-
-
 class ColIntCurveFitCollection:
     """
     Collection of Curve fit collision integrals
@@ -507,6 +496,19 @@ class ColIntCurveFitCollection:
                 return self._ci_coeffs[pair][ci_type]
             return self._ci_coeffs[pair]
         return self._ci_coeffs
+
+
+def collision_integral(ci_type, **kwargs):
+    """ Factory for collision integrals """
+    CI_TYPES = {
+        "laricchiuta": ColIntLaricchiuta,
+        "gupta_yos": ColIntGuptaYos,
+        "curve_fit": ColIntCurveFit,
+        "numerical": NumericCollisionIntegral,
+        "mason": MasonColInt,
+    }
+
+    return CI_TYPES[ci_type](**kwargs)
 
 
 if __name__ == "__main__":

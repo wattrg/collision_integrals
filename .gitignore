@@ -2,3 +2,4 @@ __pycache__/
 collision_integral.org
 figs/
 *.png
+*flycheck*

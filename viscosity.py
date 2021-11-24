@@ -3,7 +3,7 @@ from uncertainties import unumpy as unp
 import uncertainties as unct
 from matplotlib import pyplot as plt
 from data.wright_ci_data import wright_ci_data
-from collision_integrals import CollisionIntegral, ColIntCurveFitCollection
+from collision_integrals import collision_integral, ColIntCurveFitCollection
 
 NA = 6.022e23
 kB = 1.38e-16
@@ -25,23 +25,23 @@ def co2_n2_mixture_viscosity(T, cis):
     return mu
 
 def plot_co2_n2_viscosity():
-    ci = CollisionIntegral()
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
     temps = np.linspace(300, 3000, 100)
+    gas_state = {"temp": temps}
 
-    laricchiuta_co2_co2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=2.507, N=16).eval(temps)
-    wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(temps)
+    laricchiuta_co2_co2_22 = collision_integral("laricchiuta", l=2, s=2, alpha=2.507, N=16).eval(gas_state)
+    wright_omega_co2_co2_22 = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(gas_state)
     wright_co2_co2_unct = unp.uarray(wright_omega_co2_co2_22, 0.2*wright_omega_co2_co2_22)
 
-    laricchiuta_n2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=1.71, N=8).eval(temps)
-    wright_et_al_n2_22 = ci.construct_ci(ci_type="curve_fit", curve_fit_type="Omega",
+    laricchiuta_n2_n2_22 = collision_integral("laricchiuta", l=2, s=2, alpha=1.71, N=8).eval(gas_state)
+    wright_et_al_n2_22 = collision_integral("curve_fit", curve_fit_type="Omega",
                                    temps=wright_ci_data["N2:N2"]["Omega_22"]["temps"],
-                                   cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"]).eval(temps)
+                                   cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"]).eval(gas_state)
     wright_n2_n2_unct = unp.uarray(wright_et_al_n2_22, 0.1*wright_et_al_n2_22)
 
-    laricchiuta_co2_n2_22 = ci.construct_ci(ci_type="laricchiuta", l=2, s=2,
-                                            alphas=(2.507, 1.71), Ns=(16, 10)).eval(temps)
-    wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_22").eval(temps)
+    laricchiuta_co2_n2_22 = collision_integral("laricchiuta", l=2, s=2,
+                                            alphas=(2.507, 1.71), Ns=(16, 10)).eval(gas_state)
+    wright_omega_co2_n2_22 = cfs.get_col_ints(pair="CO2:N2", ci_type="Omega_22").eval(gas_state)
     wright_co2_n2_unct = unp.uarray(wright_omega_co2_n2_22, 0.2*wright_omega_co2_n2_22)
 
     wright_viscosity = co2_n2_mixture_viscosity(temps, (wright_co2_co2_unct,
@@ -58,19 +58,19 @@ def plot_co2_n2_viscosity():
                     alpha=0.5)
 
 def plot_n2_viscosity():
-    ci = CollisionIntegral()
-    gupta_yos = ci.construct_ci(ci_type="gupta_yos", curve_fit_type="pi_Omega",
+    gupta_yos = collision_integral("gupta_yos", curve_fit_type="pi_Omega",
                                     coeffs=[0.0, -0.0203, 0.0683, 4.09])
 
-    wright_et_al = ci.construct_ci(ci_type="curve_fit", curve_fit_type="Omega",
+    wright_et_al = collision_integral("curve_fit", curve_fit_type="Omega",
                                    temps=wright_ci_data["N2:N2"]["Omega_22"]["temps"],
                                    cis=wright_ci_data["N2:N2"]["Omega_22"]["cis"])
-    laricchiuta = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=1.71, N=8)
+    laricchiuta = collision_integral("laricchiuta", l=2, s=2, alpha=1.71, N=8)
 
     temps = np.linspace(300, 3000, 100)
-    gupta_eval = viscosity(temps, gupta_yos.eval(temps), 28)
-    laricchiuta_eval = viscosity(temps, laricchiuta.eval(temps), 28)
-    wright_eval = wright_et_al.eval(temps)
+    gas_state = {"temp": temps}
+    gupta_eval = viscosity(temps, gupta_yos.eval(gas_state), 28)
+    laricchiuta_eval = viscosity(temps, laricchiuta.eval(gas_state), 28)
+    wright_eval = wright_et_al.eval(gas_state)
     wright_eval_unct = unp.uarray(wright_eval, 0.1*wright_eval)
     wright_eval_unct = viscosity(temps, wright_eval_unct, 28)
 
@@ -92,16 +92,16 @@ def plot_n2_viscosity():
     plt.savefig("./figs/N2_viscosity.png")
 
 def plot_co2_viscosity():
-    ci = CollisionIntegral()
     temps = np.linspace(300, 3000, 100)
+    gas_state = {"temp": temps}
     # wright collision integrals curve fitted
     cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
 
-    laricchiuta = ci.construct_ci(ci_type="laricchiuta", l=2, s=2, alpha=2.507, N=16)
+    laricchiuta = collision_integral("laricchiuta", l=2, s=2, alpha=2.507, N=16)
 
-    wright_eval = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(temps)
+    wright_eval = cfs.get_col_ints(pair="CO2:CO2", ci_type="Omega_22").eval(gas_state)
 
-    laricchiuta_eval = viscosity(temps, laricchiuta.eval(temps), 44)
+    laricchiuta_eval = viscosity(temps, laricchiuta.eval(gas_state), 44)
     wright_eval_unct = unp.uarray(wright_eval, 0.2*wright_eval)
     wright_eval_unct = viscosity(temps, wright_eval_unct, 44)
 
