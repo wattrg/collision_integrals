@@ -572,7 +572,8 @@ if __name__ == "__main__":
     ci = collision_integral(
         "mason",
         order=(1, 1),
-        charge=(-1, -1)
+        charge=(-1, -1),
+        species=("NA", "NA")
     )
     gas_state = {"ne": 1e20, "temp": 1000}
     print("collision integral = ", ci.eval(gas_state))
