@@ -449,14 +449,7 @@ class ColIntCurveFitModel(ColIntModel):
 
     def eval(self, gas_state):
         temp = gas_state["temp"]
-        col_int = self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
-        if self._charge[0] * self._charge[1] != 0:
-            # charged collision, so need to correct for electron pressure
-            pe = gas_state["ep"]
-            col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
-                                + 1.52*(temp/1000/pe**0.25)**(8/3))
-            col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
-        return col_int
+        return self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
 
     def __repr__(self):
         return f"[a={self._a}, b={self._b}, c={self._c}, d={self._d}]"
@@ -492,17 +485,22 @@ class ColIntCurveFit:
         return cls.CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 
-class ColIntGuptaYos(ColIntCurveFit):
+class ColIntGuptaYos(ColIntCurveFitPiOmega):
     """
     Factory for collision integral curve fits in the form given
     by Gupta Yos
     """
 
-    def __new__(cls, **kwargs):
-        curve_fit_type = kwargs["curve_fit_type"]
-        if curve_fit_type not in cls.CURVE_FIT_TYPES:
-            raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](**kwargs)
+    def eval(self, gas_state):
+        col_int = super().eval(gas_state)
+        if self._charge[0] * self._charge[1] != 0:
+            # charged collision, so need to correct for electron pressure
+            temp = gas_state["temp"]
+            pe = gas_state["ep"]
+            col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
+                                + 1.52*(temp/1000/pe**0.25)**(8/3))
+            col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
+        return col_int
 
 
 class ColIntCurveFitCollection:
@@ -529,6 +527,7 @@ class ColIntCurveFitCollection:
             for ii in ["11", "22"]:
                 # extract the numeric order from the string representation
                 l = int(ii[0])
+
                 self._ci_coeffs[pair][f"Omega_{ii}"] = ColIntCurveFit(
                     curve_fit_type=self._curve_fit_type,
                     order=(l,l),
