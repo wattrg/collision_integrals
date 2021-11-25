@@ -1,3 +1,4 @@
+from eilmer.gas import GasModel, GasState
 from collision_integrals import collision_integral, ColIntCurveFitCollection
 import matplotlib.pyplot as plt
 import numpy as np
@@ -158,9 +159,12 @@ def plot_N2p_N2p_interaction():
                                           species=("N2+", "N2+"))
 
     # setup the gas state
-    temps = np.linspace(300, 15000, 150)
+    temps = np.linspace(300, 15000, 50)
     gas_state = {"temp": temps, "ne": 1e20}
-    ep_from_ne(gas_state)
+    gas_state = {"temp": temps, "ep": 100000}
+    #ep_from_ne(gas_state)
+    ne_from_ep(gas_state)
+    print(gas_state)
 
     # plot results
     fig, ax = plt.subplots(2, 1, sharex=True)
@@ -238,8 +242,8 @@ def plot_numeric_cross_section(l=1):
 
 if __name__ == "__main__":
     # plot_curve_fit_data()
-    ci_comparison_co2()
-    ci_comparison_n2()
+    #ci_comparison_co2()
+    #ci_comparison_n2()
     plot_N2p_N2p_interaction()
 
     # numeric_deflection_integrand(17, 10)

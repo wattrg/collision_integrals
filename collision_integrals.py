@@ -1,11 +1,12 @@
-# Collision integral curve fitting program
+# Collision integral calculation
 #
-# Automates curve fitting collision integrals to the form used by Eilmer4
-# The form is given by Gupta, Yos, Thompson et. al. (1989) on page 20.
+# Provides a number of models for calculating collision integrals
+# which can then be used to compute some transport properties
+# of high temperature gasses
 #
 # Author: Robert Watt
-# Versions: October 2021: first attempt
 
+from eilmer.gas import GasModel, GasState
 from scipy import optimize, interpolate
 from scipy.special import factorial
 from scipy import integrate
@@ -87,12 +88,13 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
        """
 
     log_T = np.log(temp)
-    return np.exp(d_ii) * \
-        np.power(temp, a_ii * log_T**2 + b_ii * log_T + c_ii)
+    return np.exp(d_ii) * np.power(temp, a_ii * log_T**2 + b_ii * log_T + c_ii)
+
 
 def lennard_jones(radius, sigma, epsilon):
     """ compute the Lennard Jones potential at some separation """
     return 4 * epsilon * ((sigma/radius)**12 - (sigma/radius)**6)
+
 
 def psi(s):
     """ Compute Psi(s) """
@@ -103,6 +105,7 @@ def psi(s):
         for n in range(1, s):
             tmp += 1/n
         return tmp
+
 
 def gamma_function(s):
     """ Compute the gamma function for integer values of s """
@@ -197,12 +200,11 @@ class GhoruiColInt(ColIntModel):
 
         self._m_star = mass[0] * mass[1] / (mass[0] + mass[1])
 
-    def _compute_screening_distance(self):
+    def _compute_screening_distance(self, gas_state):
         """ Calculate the screening distance """
-
-        pre_factor = self._e**2 / self._epsilon_0 / self._k_B / self._gas_state["Te"]
-        tmp = self._gas_state["e-"]
-        for species in self._gas_state.items():
+        pre_factor = self._e**2 / self._epsilon_0 / self._k_B / gas_state["Te"]
+        tmp = gas_state["ne"]
+        for species in gas_state.items():
             tmp += species["charge"]**2 * species["num_den"]
         return pre_factor * tmp
 
@@ -487,8 +489,7 @@ class ColIntCurveFit:
 
 class ColIntGuptaYos(ColIntCurveFitPiOmega):
     """
-    Factory for collision integral curve fits in the form given
-    by Gupta Yos
+    Collision integral from Gupta Yos
     """
 
     def eval(self, gas_state):
@@ -496,7 +497,7 @@ class ColIntGuptaYos(ColIntCurveFitPiOmega):
         if self._charge[0] * self._charge[1] != 0:
             # charged collision, so need to correct for electron pressure
             temp = gas_state["temp"]
-            pe = gas_state["ep"]
+            pe = gas_state["ep"]/100000
             col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
                                 + 1.52*(temp/1000/pe**0.25)**(8/3))
             col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
