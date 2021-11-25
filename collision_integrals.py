@@ -20,14 +20,39 @@ from abc import ABC, abstractmethod
 class ColIntModel(ABC):
     """ Base class for collision integral models """
     def __init__(self, **kwargs):
+        # get the order of the collision integral
         try:
             order = kwargs["order"]
             self._l, self._s = order[0], order[1]
         except KeyError:
             raise AttributeError("The order of the collision integral must be supplied")
 
+        # get the species involved in the collision
+        try:
+            self._species = kwargs["species"]
+        except KeyError:
+            raise AttributeError("Colliding species not specified")
+
+        # get the charge of the species in the collision
+        self._charge = kwargs.get("charge", [None, None])
+        if self._charge == [None, None]:
+            for i in range(2):
+                if "+" in self._species[i]:
+                    self._charge[i] = 1
+                elif "-" in self._species[i]:
+                    self._charge[i] = -1
+
+    def get_charge(self):
+        """ Return the charge of the species """
+        return tuple(self._charge)
+
     def get_order(self):
+        """ Return the order of the collision integral """
         return self._l, self._s
+
+    def get_species(self):
+        """ Return the species in the collision integral """
+        return self._species
 
     @abstractmethod
     def eval(self, gas_state):
@@ -93,6 +118,7 @@ class MasonColInt(ColIntModel):
     The model assumes a shielded coulomb potential, and evaluates a curve fit
 
     Ref: "Transport Coefficients of Ionized Gases" by Mason, Munn, Smith
+    Curve fit from Wright et al 2007
     """
 
     _e = 4.803e-10 # electron charge (esu)
@@ -100,10 +126,10 @@ class MasonColInt(ColIntModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        charge = kwargs["charge"]
         assert self._l == self._s, "l must equal s"
+        charge = kwargs["charge"]
 
-        # select curve fit parameters
+        # repulsive potential
         if charge[0] * charge[1] > 0:
             if self._l == 1:
                 self._Cn = 0.138
@@ -114,6 +140,7 @@ class MasonColInt(ColIntModel):
                 self._cn = 0.0274
                 self._Dn = 1.235
 
+        # attractive potential
         elif charge[0] * charge[1] < 0:
             if self._l == 1:
                 self._Cn = -0.476
@@ -425,11 +452,10 @@ class ColIntCurveFitModel(ColIntModel):
         col_int = self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
         if self._charge[0] * self._charge[1] != 0:
             # charged collision, so need to correct for electron pressure
-            pe = gas_state["pe"]
-            correction = np.log(2.09e-2 * (temp/(1000*pe**0.25))**4
-                                + 1.52*(temp/(1000*pe**0.25))**(8/3))
-            correction /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
-            col_int *= correction
+            pe = gas_state["ep"]
+            col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
+                                + 1.52*(temp/1000/pe**0.25)**(8/3))
+            col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
         return col_int
 
     def __repr__(self):
@@ -461,12 +487,9 @@ class ColIntCurveFit:
 
     def __new__(cls, **kwargs):
         curve_fit_type = kwargs["curve_fit_type"]
-        temps = kwargs["temps"]
-        cis = kwargs["cis"]
-        order = kwargs["order"]
         if curve_fit_type not in cls.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](order=order, temps=temps, cis=cis)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 
 class ColIntGuptaYos(ColIntCurveFit):
@@ -477,11 +500,9 @@ class ColIntGuptaYos(ColIntCurveFit):
 
     def __new__(cls, **kwargs):
         curve_fit_type = kwargs["curve_fit_type"]
-        coeffs = kwargs["coeffs"]
-        order = kwargs["order"]
         if curve_fit_type not in cls.CURVE_FIT_TYPES:
             raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](order=order, coeffs=coeffs)
+        return cls.CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 
 class ColIntCurveFitCollection:
@@ -495,6 +516,7 @@ class ColIntCurveFitCollection:
         self._ci_coeffs = {}
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
+            species = pair.split(":")
 
             # check if both species are charged
             charge = [0, 0]
@@ -513,6 +535,7 @@ class ColIntCurveFitCollection:
                     temps=pair_ci[f"Omega_{ii}"]["temps"],
                     cis=pair_ci[f"Omega_{ii}"]["cis"],
                     charge=charge,
+                    species=species
                 )
 
     def get_col_ints(self, pair=None, ci_type=None):
@@ -533,13 +556,12 @@ def collision_integral(ci_type, **kwargs):
 
     Returns:
         ci: A concrete collision integral instsance
-
     """
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
         "curve_fit": ColIntCurveFit,
-        "numerical": NumericCollisionIntegral,
+        #"numerical": NumericCollisionIntegral,
         "mason": MasonColInt,
     }
 
