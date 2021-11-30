@@ -42,6 +42,8 @@ class ColIntModel(ABC):
                     self._charge[i] = 1
                 elif "-" in self._species[i]:
                     self._charge[i] = -1
+                else:
+                    self._charge[i] = 0
 
     def get_charge(self):
         """ Return the charge of the species """
