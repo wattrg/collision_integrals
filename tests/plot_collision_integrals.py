@@ -2,7 +2,6 @@ from eilmer.gas import GasModel, GasState
 from collision_integrals import collision_integral, ColIntCurveFitCollection
 import matplotlib.pyplot as plt
 import numpy as np
-from data.hcb_ci_data import hcb_ci_data
 from data.wright_ci_data import wright_ci_data
 
 plt.rcParams["savefig.dpi"] = 600
@@ -164,7 +163,6 @@ def plot_N2p_N2p_interaction():
     gas_state = {"temp": temps, "ep": 100000}
     #ep_from_ne(gas_state)
     ne_from_ep(gas_state)
-    print(gas_state)
 
     # plot results
     fig, ax = plt.subplots(2, 1, sharex=True)
@@ -186,7 +184,8 @@ def plot_curve_fit_data():
     wright_co2_co2_cis = co2_co2_ci._cis
 
     temps = np.linspace(300, 20000)
-    curve_fit_ci = co2_co2_ci.eval(temps)
+    gas_state = {"temp": temps}
+    curve_fit_ci = co2_co2_ci.eval(gas_state)
 
     fig, ax = plt.subplots()
     ax.plot(wright_co2_co2_temps, wright_co2_co2_cis, label="Wright et al")
@@ -241,12 +240,9 @@ def plot_numeric_cross_section(l=1):
     numeric_ci._collision_cross_section(rel_vels)
 
 if __name__ == "__main__":
-    # plot_curve_fit_data()
-    #ci_comparison_co2()
-    #ci_comparison_n2()
+    plot_curve_fit_data()
+    ci_comparison_co2()
+    ci_comparison_n2()
     plot_N2p_N2p_interaction()
 
-    # numeric_deflection_integrand(17, 10)
-    # numeric_deflection_angles([10, 100, 500])
-    #plot_numeric_cross_section()
     plt.show()

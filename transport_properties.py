@@ -129,7 +129,7 @@ class TwoTempTransProp(TransProp):
                 else:
                     T_ci = gas_state["temp"]
                 # compute delta for this pair
-                tmp = factor*1.546e-20*np.sqrt(2*self._mu[pair]/(np.pi*8.314*T_ci))
+                tmp = factor*1.546e-20*np.sqrt(2*self._mu[pair]/(np.pi*8.31451*T_ci))
                 deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
                 # the pair written in opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
@@ -183,7 +183,7 @@ if __name__ == "__main__":
 
         # current formulation
         gas_state["temp"] = temp
-        my_mus.append(trans_prop.viscosity(gas_state)/2.06)
+        my_mus.append(trans_prop.viscosity(gas_state))
 
     plt.plot(temps, eilmer_mus, 'k--', label="Eilmer")
     plt.plot(temps, my_mus, label="Current")

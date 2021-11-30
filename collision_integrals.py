@@ -89,7 +89,7 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
        """
 
     log_T = np.log(temp)
-    return np.exp(d_ii) * np.power(temp, a_ii * log_T**2 + b_ii * log_T + c_ii)
+    return np.exp(d_ii) * np.power(temp, a_ii*log_T**2 + b_ii*log_T + c_ii)
 
 
 def lennard_jones(radius, sigma, epsilon):
@@ -228,6 +228,16 @@ class ColIntLaricchiuta(ColIntModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # set the zeta values and collision type
+        if self._charge[0] != 0 or self._charge[1] != 0:
+            self._zeta = [0.7564, 0.064605]
+            self._col_type = "ion-neutral"
+        if self._charge[0] == 0 and self._charge[1] == 0:
+            self._zeta = [0.8002, 0.049256]
+            self._col_type = "neutral-neutral"
+        else:
+            raise Exception("Invalid collision type for Laricchiuta integrals")
+
         # physical parameters
         if "sigma" in kwargs:
             self._sigma = kwargs["sigma"]
@@ -246,11 +256,6 @@ class ColIntLaricchiuta(ColIntModel):
         else:
             raise ValueError("No sigma or alpha value provided")
 
-        # set the zeta values
-        if self._charge[0] != 0 or self._charge[1] != 0:
-            self._zeta = [0.7564, 0.064605]
-        if self._charge[0] == 0 and self._charge[1] == 0:
-            self._zeta = [0.8002, 0.049256]
 
         # compute x_0
         self._x_0 = self._zeta[0] * self._beta ** self._zeta[1]
@@ -316,35 +321,33 @@ class ColIntCurveFitModel(ColIntModel):
             self._cis = kwargs["cis"]
             self._evaluate_coeffs()
         elif "coeffs" in kwargs:
-            self._a, self._b, self._c, self._d = kwargs["coeffs"]
+            self._coeffs = kwargs["coeffs"]
         else:
             raise ValueError("Curve fit model must have collision "
                              "integrals or coefficients")
 
     @abstractmethod
-    def _curve_fit_form(self, temp, a, b, c, d):
+    def _curve_fit_form(self, temp, *args):
         pass
 
     def _evaluate_coeffs(self):
-        (a, b, c, d), _ = optimize.curve_fit(self._curve_fit_form,
+        self._coeffs, _ = optimize.curve_fit(self._curve_fit_form,
                                              self._temps,
                                              self._cis,
-                                             [-0.01, 0.3, -2.5, 11])
-        self._a = a
-        self._b = b
-        self._c = c
-        self._d = d
+                                             self._guess)
+                                             #[-0.01, 0.3, -2.5, 11])
 
     def eval(self, gas_state):
         temp = gas_state["temp"]
-        return self._curve_fit_form(temp, self._a, self._b, self._c, self._d)
+        return self._curve_fit_form(temp, *self._coeffs)
 
     def __repr__(self):
-        return f"[a={self._a}, b={self._b}, c={self._c}, d={self._d}]"
+        return f"{self._coeffs}"
 
 
 class ColIntCurveFitPiOmega(ColIntCurveFitModel):
     """ Curve fit of pi * Omega """
+    _guess = [-0.01, 0.3, -2.5, 11]
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d) / np.pi
@@ -352,25 +355,25 @@ class ColIntCurveFitPiOmega(ColIntCurveFitModel):
 
 class ColIntCurveFitOmega(ColIntCurveFitModel):
     """ Curve fitted collision integral """
+    _guess = [-0.01, 0.3, -2.5, 11]
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class ColIntCurveFit:
+def col_int_curve_fit(**kwargs):
     """
-    Factory class for curve fitted collision integrals
+    Factory for curve fitted collision integrals
     """
     CURVE_FIT_TYPES = {
         "Omega": ColIntCurveFitOmega,
         "pi_Omega": ColIntCurveFitPiOmega,
     }
 
-    def __new__(cls, **kwargs):
-        curve_fit_type = kwargs["curve_fit_type"]
-        if curve_fit_type not in cls.CURVE_FIT_TYPES:
-            raise ValueError(curve_fit_type)
-        return cls.CURVE_FIT_TYPES[curve_fit_type](**kwargs)
+    curve_fit_type = kwargs["curve_fit_type"]
+    if curve_fit_type not in CURVE_FIT_TYPES:
+        raise ValueError(curve_fit_type)
+    return CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 
 class ColIntGuptaYos(ColIntCurveFitPiOmega):
@@ -415,7 +418,7 @@ class ColIntCurveFitCollection:
                 # extract the numeric order from the string representation
                 l = int(ii[0])
 
-                self._ci_coeffs[pair][f"Omega_{ii}"] = ColIntCurveFit(
+                self._ci_coeffs[pair][f"Omega_{ii}"] = col_int_curve_fit(
                     curve_fit_type=self._curve_fit_type,
                     order=(l,l),
                     temps=pair_ci[f"Omega_{ii}"]["temps"],
@@ -446,7 +449,7 @@ def collision_integral(ci_type, **kwargs):
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
-        "curve_fit": ColIntCurveFit,
+        "curve_fit": col_int_curve_fit,
         "mason": MasonColInt,
     }
 
