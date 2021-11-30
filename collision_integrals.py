@@ -26,13 +26,13 @@ class ColIntModel(ABC):
             order = kwargs["order"]
             self._l, self._s = order[0], order[1]
         except KeyError:
-            raise AttributeError("The order of the collision integral must be supplied")
+            raise Exception("The order of the collision integral must be supplied")
 
         # get the species involved in the collision
         try:
             self._species = kwargs["species"]
         except KeyError:
-            raise AttributeError("Colliding species not specified")
+            raise Exception("Colliding species not specified")
 
         # get the charge of the species in the collision
         self._charge = kwargs.get("charge", [None, None])
@@ -186,10 +186,6 @@ class GhoruiColInt(ColIntModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        mass = kwargs["mass"]
-        charge = kwargs["charge"]
-        self._gas_state = kwargs["gas_state"]
-        self._l, self._s = kwargs["l"], kwargs["s"]
 
         if self._l == 1:
             self._l_term = 0.5
@@ -338,9 +334,6 @@ class ColIntLaricchiuta(ColIntModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # type of particles colliding
-        self._col_type = kwargs.get("col_type", "neutral-neutral")
-
         # physical parameters
         if "sigma" in kwargs:
             self._sigma = kwargs["sigma"]
@@ -359,11 +352,11 @@ class ColIntLaricchiuta(ColIntModel):
         else:
             raise ValueError("No sigma or alpha value provided")
 
-        # set the non zeta values
-        if self._col_type == "neutral-neutral":
-            self._zeta = [0.8002, 0.049256]
-        elif self._col_type == "ion-neutral":
+        # set the zeta values
+        if self._charge[0] != 0 or self._charge[1] != 0:
             self._zeta = [0.7564, 0.064605]
+        if self._charge[0] == 0 and self._charge[1] == 0:
+            self._zeta = [0.8002, 0.049256]
 
         # compute x_0
         self._x_0 = self._zeta[0] * self._beta ** self._zeta[1]
@@ -424,7 +417,6 @@ class ColIntCurveFitModel(ColIntModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._charge = kwargs.get("charge", (0, 0))
         if "cis" in kwargs:
             self._temps = kwargs["temps"]
             self._cis = kwargs["cis"]
