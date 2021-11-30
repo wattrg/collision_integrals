@@ -48,7 +48,7 @@ class TwoTempTransProp(TransProp):
         self._cis_22 = {}
         self._mu = {}
         for name_i in self._species_names:
-            for name_j in self._species_names:
+            for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = (name_i, name_j)
                 # construct the collision integrals
                 model = self._choose_col_int_model(ci_models, pair)
@@ -57,12 +57,15 @@ class TwoTempTransProp(TransProp):
                 params_22 = self._get_col_int_parameters(model,
                                                          pair, (2,2))
                 self._cis_11[pair] = collision_integral(model, **params_11)
+                self._cis_11[pair[::-1]] = self._cis_11[pair]
                 self._cis_22[pair] = collision_integral(model, **params_22)
+                self._cis_22[pair[::-1]] = self._cis_22[pair]
 
                 # calculate reduced mass
                 mu_a = gas_model[name_i]["M"]
                 mu_b = gas_model[name_j]["M"]
-                self._mu[pair] = mu_a * mu_b / (mu_a + mu_b)
+                self._mu[pair] = mu_a * mu_b / (mu_a + mu_b) * 1000
+                self._mu[pair[::-1]] = self._mu[pair]
 
 
     def _get_col_int_parameters(self, ci_model, pair, order):
@@ -111,22 +114,22 @@ class TwoTempTransProp(TransProp):
         # decide which order collision integrals to use
         if order == (1, 1):
             ci = self._cis_11
+            factor = 8./3
         elif order == (2, 2):
             ci = self._cis_22
+            factor = 16./5
 
         # calculate all the deltas
         for name_i in self._species_names:
-            for name_j in self._species_names:
+            for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = (name_i, name_j)
-                if pair in deltas:
-                    continue
                 # choose temperature to use to evaluate collision integral at
                 if name_i == "e-":
                     T_ci = gas_state["T_modes"][0]
                 else:
                     T_ci = gas_state["temp"]
                 # compute delta for this pair
-                tmp = (8/3)*1.546e-20*np.sqrt(2*self._mu[pair]/(np.pi*8.314*T_ci))
+                tmp = factor*1.546e-20*np.sqrt(2*self._mu[pair]/(np.pi*8.314*T_ci))
                 deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
                 # the pair written in opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
@@ -137,9 +140,9 @@ class TwoTempTransProp(TransProp):
         sumA = 0.0
         for name_i in self._species_names:
             denom = 0.0
+            if name_i == "e-": continue
             for name_j in self._species_names:
                 denom += gas_state["molef"][name_j]*delta_22[name_i, name_j]
-            if name_i == "e-": continue
             sumA += self._particle_mass[name_i] * gas_state["molef"][name_i]/denom
         # add term if electron present.
         if "e-" in self._species_names:
@@ -164,22 +167,25 @@ if __name__ == "__main__":
     gmodel = GasModel("tests/two_temp_gas.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
-    gs.massf = {"N2": 0.8, "O2": 0.2}
+    gs.massf = {"N2": 1.0, "O2": 0.0}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
     temps = np.linspace(300, 3000, 100)
     eilmer_mus = []
     my_mus = []
     for temp in temps:
+        # eilmer formulation
         gs.T = temp
         gs.T_modes = [temp]
         gs.update_thermo_from_pT()
         gs.update_trans_coeffs()
         eilmer_mus.append(gs.mu)
 
+        # current formulation
         gas_state["temp"] = temp
-        my_mus.append(trans_prop.viscosity(gas_state)/100)
-    plt.plot(temps, eilmer_mus, label="Eilmer")
+        my_mus.append(trans_prop.viscosity(gas_state)/2.06)
+
+    plt.plot(temps, eilmer_mus, 'k--', label="Eilmer")
     plt.plot(temps, my_mus, label="Current")
     plt.legend()
     plt.ylim(bottom=0)

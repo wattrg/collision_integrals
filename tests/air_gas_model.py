@@ -1,7 +1,7 @@
 air = {
     "N2": {
         "type": "molecule",
-        "M": 28e-3,
+        "M": 2.8013e-2,
         "sigma": 3.621,
         "epsilon": 97.53,
         "charge": 0,

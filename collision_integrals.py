@@ -465,3 +465,13 @@ if __name__ == "__main__":
     print("temp star = ", ci._temp_star(gas_state))
     print("debye length = ", ci._debye_length(gas_state))
     print("temp star square * ci = ", ci.eval(gas_state) * ci._temp_star(gas_state)**2)
+
+    ci = collision_integral(
+        "gupta_yos",
+        order=(1,1),
+        charge=(0,0),
+        species=("N2", "N2"),
+        coeffs=[0.0, -0.0112, -0.1182, 4.8464]
+    )
+    gas_state = {"temp": 1000}
+    print(ci.eval(gas_state))
