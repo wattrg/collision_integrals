@@ -12,7 +12,6 @@ from scipy.special import factorial
 from scipy import integrate
 import numpy as np
 import matplotlib.pyplot as plt
-from data.hcb_ci_data import hcb_ci_data
 from data.wright_ci_data import wright_ci_data
 from data.Laricchiuta import laricchiuta_coeffs
 from abc import ABC, abstractmethod
@@ -215,113 +214,6 @@ class GhoruiColInt(ColIntModel):
         pre_factor *= self._beta**2 * self._b_0**2 * gamma_function(self._s)
         log_Lambda = np.log(2 * self._compute_screening_distance / self._beta / self._b_0)
         return pre_factor * (log_Lambda - self._l_term - 2 * self._gamma + psi(self._s))
-
-
-class NumericCollisionIntegral(ColIntModel):
-    """ Collision integral performed numerically from scratch """
-
-    POTENTIALS = {
-        "lennard_jones": lennard_jones,
-    }
-
-    def __init__(self, order, **kwargs):
-        super().__init__(order)
-        if callable(kwargs["potential"]):
-            self._potential_func = kwargs["potential"]
-        else:
-            self._potential_func = self.POTENTIALS[kwargs["potential"]]
-        self._epsilon = kwargs["epsilon"]
-        self._sigma = kwargs["sigma"]
-        self._mu = kwargs["mu"]
-
-    def _potential(self, radius):
-        """ Evaluate the potential at the particular radius """
-        return self._potential_func(radius, self._sigma, self._epsilon)
-
-    def _r_m_func(self, radius, impact_param, rel_vel):
-        gamma_2 = 0.5 * self._mu * rel_vel**2
-        # tmp = -radius**2/impact_param
-        # tmp *= np.sqrt(1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2)
-        return self._potential(radius)/gamma_2 + (impact_param/radius)**2 - 1
-
-    def _calc_r_m(self, impact_param, rel_vel):
-        """ Compute the value of r_m for computing the deflection angle """
-        if hasattr(rel_vel, "__iter__"):
-            r_ms = np.zeros_like(rel_vel)
-            for i, g in enumerate(rel_vel):
-                r_ms[i] = optimize.root_scalar(self._r_m_func,
-                                               x0=1e-10, x1=1e-9,
-                                               method="secant",
-                                               args=(impact_param, g)).root
-            return r_ms
-        else:
-            return optimize.root_scalar(self._r_m_func,
-                                        x0=1e-10, x1=1e-9,
-                                        method="secant",
-                                        args=(impact_param, rel_vel)).root
-
-    def _deflection_integrand(self, radius, impact_param, rel_vel):
-        """ Integrand for computing the deflection angle """
-
-        gamma_2 = 0.5 * self._mu * rel_vel**2
-        tmp = 1 - self._potential(radius)/gamma_2 - (impact_param/radius)**2
-        if hasattr(tmp, "__iter__"):
-            tmp[tmp < 0.0] = 1e-300
-        else:
-            tmp = max(tmp, 1e-300)
-        if np.any(tmp < 0):
-            print(f"WARNING: Invalid value under square root\n"
-                  f"         radius = {radius}\n"
-                  f"         impact_param = {impact_param}\n"
-                  f"         rel_vel = {rel_vel}\n"
-                  f"         sqrt = {tmp}\n"
-                  f"         r_m = {self._calc_r_m(impact_param, rel_vel)}")
-        tmp = np.sqrt(tmp)
-        return 1 / tmp / radius**2
-
-    def _deflection_angle(self, impact_param, rel_vel):
-        """
-        Compute the deflection angle for a given relative velocity and
-        impact parameter
-        """
-        r_m = self._calc_r_m(impact_param, rel_vel)
-        if hasattr(rel_vel, "__iter__"):
-            integral = np.zeros_like(rel_vel)
-            for i, g in enumerate(rel_vel):
-                integral[i],_ = integrate.quad(self._deflection_integrand,
-                                               r_m + 1e-10, np.inf,
-                                               limit=100,
-                                               args=(impact_param, g))
-        else:
-            integral, _ = integrate.quad(self._deflection_integrand,
-                                        r_m + 1e-10, np.inf,
-                                        limit=100,
-                                        args=(impact_param, rel_vel))
-        return np.pi - 2 * impact_param * integral
-
-    def _collision_cross_section_integrand(self, impact_parameter, rel_vel):
-        """ Compute the integrand for the collision cross section """
-        deflection_angle = self._deflection_angle(impact_parameter, rel_vel)
-        return (1 - np.cos(deflection_angle)**self._l) * impact_parameter
-
-    def _collision_cross_section(self, rel_vel):
-        """Compute the collision cross section for a given relative velocity"""
-        if hasattr(rel_vel, "__iter__"):
-            integral = np.zeros_like(rel_vel)
-            for i, g in enumerate(rel_vel):
-                integral[i], _ = integrate.quad(self._collision_cross_section_integrand,
-                                            0.0, np.inf,
-                                            limit=100,
-                                            args=(g))
-        else:
-            integral, _ = integrate.quad(self._collision_cross_section_integrand,
-                                        0.0, np.inf,
-                                        limit=100,
-                                        args=(rel_vel))
-        return 2 * np.pi * integral
-
-    def eval(self, gas_state):
-        pass
 
 
 class ColIntLaricchiuta(ColIntModel):
@@ -555,7 +447,6 @@ def collision_integral(ci_type, **kwargs):
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
         "curve_fit": ColIntCurveFit,
-        #"numerical": NumericCollisionIntegral,
         "mason": MasonColInt,
     }
 
