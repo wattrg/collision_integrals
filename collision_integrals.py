@@ -72,18 +72,16 @@ class ColIntModel(ABC):
 
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
     """
-       The functional form to fit the data to. Note that a division by
-       pi is present to account for Gupta Yos using pi * Omega,
-       whereas usually Omega itself is reported
+    The curve fit of collision integrals proposed by Gupta, Yos, Thomson (1990)
 
-       Parameters:
+    Parameters:
        temp (float): The temperature to evaluate the CI at
-       a_ii (float): Curve fit parameter A_ii in Gupta et al. (1989)
-       b_ii (float): Curve fit parameter B_ii in Gupta et al. (1989)
-       c_ii (float): Curve fit parameter C_ii in Gupta et al. (1989)
-       d_ii (float): Curve fit parameter D_ii in Gupta et al. (1989)
+       a_ii (float): Curve fit parameter A_ii
+       b_ii (float): Curve fit parameter B_ii
+       c_ii (float): Curve fit parameter C_ii
+       d_ii (float): Curve fit parameter D_ii
 
-       Returns:
+    Returns:
        pi_omega_ii (float): The estimated value of pi_omega_ii
                             using the parameters provided
        """
@@ -379,7 +377,7 @@ class ColIntGuptaYos(ColIntCurveFitPiOmega):
         if self._charge[0] * self._charge[1] != 0:
             # charged collision, so need to correct for electron pressure
             temp = gas_state["temp"]
-            pe = gas_state["ep"]/100000
+            pe = gas_state["ep"]/101325
             col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
                                 + 1.52*(temp/1000/pe**0.25)**(8/3))
             col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
@@ -435,8 +433,12 @@ def col_int_wright(**kwargs):
     This just creates a curve fit collision integral,
     but points it to the data by wright
     """
-    species = kwargs["species"]
-    order = kwargs["order"]
+    try:
+        species = kwargs["species"]
+        order = kwargs["order"]
+    except KeyError:
+        raise KeyError("You must supply the species and order for Wright collision integrals")
+
     data = wright_ci_data[f"{species[0]}:{species[1]}"][f"Omega_{order[0]}{order[1]}"]
     kwargs["temps"] = data["temps"]
     kwargs["cis"] = data["cis"]
@@ -446,10 +448,13 @@ def col_int_wright(**kwargs):
 
 def collision_integral(ci_type, **kwargs):
     """
-    Create a collision integral
+    Handles the high level creation of collision integrals
 
     Parameters:
         ci_type (string): The type of collision integral
+
+    Optional parameters:
+        Any parameters required to construct the desired collision integral
 
     Returns:
         ci: A concrete collision integral instsance
