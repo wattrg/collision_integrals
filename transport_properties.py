@@ -26,7 +26,7 @@ class TransProp(ABC):
 class TwoTempTransProp(TransProp):
     """ Calculates transport properties of two temperature gasses """
 
-    def __init__(self, gas_model, ci_models):
+    def __init__(self, gas_model, ci_models=None):
         """
         Initialise a two temperature transport properties
 
@@ -35,8 +35,12 @@ class TwoTempTransProp(TransProp):
 
         ci_models (Dict):
             The collision integral models to use. If no collision integral
-            model is specified for a given pair, defaults are available
+            model is specified for a given pair, a default one will be chosen
         """
+
+        # if ci_models weren't supplied, set them to be an empty dictionary
+        if not ci_models:
+            ci_models = {}
 
         self._species_names = []
         self._particle_mass = {}
@@ -186,7 +190,8 @@ if __name__ == "__main__":
         my_mus.append(trans_prop.viscosity(gas_state))
 
     plt.plot(temps, eilmer_mus, 'k--', label="Eilmer")
-    plt.plot(temps, my_mus, label="Current")
+    plt.plot(temps, np.array(my_mus)/(my_mus[0]/eilmer_mus[0]), label="Current")
+    print(my_mus[0]/eilmer_mus[0])
     plt.legend()
     plt.ylim(bottom=0)
     plt.show()
