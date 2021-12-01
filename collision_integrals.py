@@ -91,12 +91,6 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
     log_T = np.log(temp)
     return np.exp(d_ii) * np.power(temp, a_ii*log_T**2 + b_ii*log_T + c_ii)
 
-
-def lennard_jones(radius, sigma, epsilon):
-    """ compute the Lennard Jones potential at some separation """
-    return 4 * epsilon * ((sigma/radius)**12 - (sigma/radius)**6)
-
-
 def psi(s):
     """ Compute Psi(s) """
     if s == 1:
@@ -323,8 +317,8 @@ class ColIntCurveFitModel(ColIntModel):
         elif "coeffs" in kwargs:
             self._coeffs = kwargs["coeffs"]
         else:
-            raise ValueError("Curve fit model must have collision "
-                             "integrals or coefficients")
+            raise ValueError("Curve fit model must be provided tabulated "
+                             "collision integrals or coefficients")
 
     @abstractmethod
     def _curve_fit_form(self, temp, *args):
@@ -335,7 +329,6 @@ class ColIntCurveFitModel(ColIntModel):
                                              self._temps,
                                              self._cis,
                                              self._guess)
-                                             #[-0.01, 0.3, -2.5, 11])
 
     def eval(self, gas_state):
         temp = gas_state["temp"]
@@ -435,6 +428,21 @@ class ColIntCurveFitCollection:
             return self._ci_coeffs[pair]
         return self._ci_coeffs
 
+def col_int_wright(**kwargs):
+    """
+    Create a collision integral from Wright et al
+
+    This just creates a curve fit collision integral,
+    but points it to the data by wright
+    """
+    species = kwargs["species"]
+    order = kwargs["order"]
+    data = wright_ci_data[f"{species[0]}:{species[1]}"][f"Omega_{order[0]}{order[1]}"]
+    kwargs["temps"] = data["temps"]
+    kwargs["cis"] = data["cis"]
+    kwargs["curve_fit_type"] = "Omega"
+    return col_int_curve_fit(**kwargs)
+
 
 def collision_integral(ci_type, **kwargs):
     """
@@ -449,6 +457,7 @@ def collision_integral(ci_type, **kwargs):
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
+        "wright": col_int_wright,
         "curve_fit": col_int_curve_fit,
         "mason": MasonColInt,
     }
@@ -478,3 +487,9 @@ if __name__ == "__main__":
     )
     gas_state = {"temp": 1000}
     print(ci.eval(gas_state))
+
+    ci = collision_integral(
+        "wright",
+        order=(1,1),
+        species=("N2", "N2"),
+    )
