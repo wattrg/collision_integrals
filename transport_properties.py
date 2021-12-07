@@ -181,7 +181,7 @@ if __name__ == "__main__":
     gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
-    temps = np.linspace(300, 3000, 100)
+    temps = np.linspace(300, 5000, 100)
     eilmer_mus = []
     gupta_mus = []
     wright_mus = []
@@ -201,16 +201,18 @@ if __name__ == "__main__":
         laricchiuta_mus.append(laricchiuta_trans_prop.viscosity(gas_state))
 
     fig, ax = plt.subplots()
-    ax.plot(temps, eilmer_mus, 'k--', label="Eilmer/Eilmer")
-    ax.plot(temps, unp.nominal_values(wright_mus), 'k', label="Wright")
-    ax.fill_between(temps,
+    line_e, = ax.plot(temps, eilmer_mus, 'k--')
+    line_w, = ax.plot(temps, unp.nominal_values(wright_mus), 'k')
+    fill_w = ax.fill_between(temps,
                      unp.nominal_values(wright_mus)+unp.std_devs(wright_mus),
                      unp.nominal_values(wright_mus)-unp.std_devs(wright_mus),
                      alpha=0.5)
-    ax.plot(temps, laricchiuta_mus, 'k:', label="Laricchiuta")
-    ax.legend()
+    line_l, = ax.plot(temps, laricchiuta_mus, 'k:')
+    ax.legend([line_e, (line_w, fill_w), line_l],
+              ["Gupta-Yos/Eilmer", "Wright", "Laricchiuta"])
     ax.set_ylim(bottom=0)
     ax.grid()
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     plt.show()
