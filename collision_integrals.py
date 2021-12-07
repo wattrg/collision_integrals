@@ -44,6 +44,8 @@ class ColIntModel(ABC):
                 else:
                     self._charge[i] = 0
 
+        self._model = kwargs["model"]
+
     def get_charge(self):
         """ Return the charge of the species """
         return tuple(self._charge)
@@ -56,6 +58,10 @@ class ColIntModel(ABC):
         """ Return the species in the collision integral """
         return self._species
 
+    def get_model(self):
+        """ Return the model of the collision integral """
+        return self._model
+
     @abstractmethod
     def eval(self, gas_state):
         """
@@ -67,7 +73,7 @@ class ColIntModel(ABC):
         Returns:
             ci (float): The evaluated collision integral
         """
-        pass
+        raise NotImplementedError
 
 
 def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
@@ -117,10 +123,14 @@ class MasonColInt(ColIntModel):
     Curve fit from Wright et al 2007
     """
 
+    # electron charge and Bolzmann's constant are in these units
+    # to match the values given by Mason
     _e = 4.803e-10 # electron charge (esu)
     _k_B = 1.3806e-16 # Boltzmann's constant (erg/K)
 
     def __init__(self, **kwargs):
+        if "model" not in kwargs:
+            kwargs["model"] = "mason"
         super().__init__(**kwargs)
         assert self._l == self._s, "l must equal s"
         charge = kwargs["charge"]
@@ -178,6 +188,8 @@ class GhoruiColInt(ColIntModel):
     _k_B = 1.38e-23
 
     def __init__(self, **kwargs):
+        if "model" not in kwargs:
+            kwargs["model"] = "ghorui"
         super().__init__(**kwargs)
 
         if self._l == 1:
@@ -218,6 +230,8 @@ class ColIntLaricchiuta(ColIntModel):
     """
 
     def __init__(self, **kwargs):
+        if "model" not in kwargs:
+            kwargs["model"] = "laricchiuta"
         super().__init__(**kwargs)
 
         # set the zeta values and collision type
@@ -307,7 +321,13 @@ class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
     def __init__(self, **kwargs):
+        if "model" not in kwargs:
+            if hasattr(self, "_model"):
+                kwargs["model"] = self._model
+            else:
+                kwargs["model"] = "curve_fit"
         super().__init__(**kwargs)
+
         if "cis" in kwargs:
             self._temps = kwargs["temps"]
             self._cis = kwargs["cis"]
@@ -315,7 +335,7 @@ class ColIntCurveFitModel(ColIntModel):
         elif "coeffs" in kwargs:
             self._coeffs = kwargs["coeffs"]
         else:
-            raise ValueError("Curve fit model must be provided tabulated "
+            raise ValueError("Curve fit model must be provide tabulated "
                              "collision integrals or coefficients")
 
     @abstractmethod
@@ -339,6 +359,7 @@ class ColIntCurveFitModel(ColIntModel):
 class ColIntCurveFitPiOmega(ColIntCurveFitModel):
     """ Curve fit of pi * Omega """
     _guess = [-0.01, 0.3, -2.5, 11]
+    _model = "curve_fit_pi_omega"
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d) / np.pi
@@ -347,24 +368,10 @@ class ColIntCurveFitPiOmega(ColIntCurveFitModel):
 class ColIntCurveFitOmega(ColIntCurveFitModel):
     """ Curve fitted collision integral """
     _guess = [-0.01, 0.3, -2.5, 11]
+    _model = "curve_fit_omega"
 
     def _curve_fit_form(self, temp, a, b, c, d):
         return omega_curve_fit(temp, a, b, c, d)
-
-
-def col_int_curve_fit(**kwargs):
-    """
-    Factory for curve fitted collision integrals
-    """
-    CURVE_FIT_TYPES = {
-        "Omega": ColIntCurveFitOmega,
-        "pi_Omega": ColIntCurveFitPiOmega,
-    }
-
-    curve_fit_type = kwargs["curve_fit_type"]
-    if curve_fit_type not in CURVE_FIT_TYPES:
-        raise ValueError(curve_fit_type)
-    return CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 
 class ColIntGuptaYos(ColIntCurveFitPiOmega):
@@ -375,6 +382,7 @@ class ColIntGuptaYos(ColIntCurveFitPiOmega):
     def eval(self, gas_state):
         col_int = super().eval(gas_state)
         if self._charge[0] * self._charge[1] != 0:
+            print("Correcting for electron pressure")
             # charged collision, so need to correct for electron pressure
             temp = gas_state["temp"]
             pe = gas_state["ep"]/101325
@@ -445,6 +453,19 @@ def col_int_wright(**kwargs):
     kwargs["curve_fit_type"] = "Omega"
     return col_int_curve_fit(**kwargs)
 
+def col_int_curve_fit(**kwargs):
+    """
+    Factory for curve fitted collision integrals
+    """
+    CURVE_FIT_TYPES = {
+        "Omega": ColIntCurveFitOmega,
+        "pi_Omega": ColIntCurveFitPiOmega,
+    }
+
+    curve_fit_type = kwargs["curve_fit_type"]
+    if curve_fit_type not in CURVE_FIT_TYPES:
+        raise ValueError(curve_fit_type)
+    return CURVE_FIT_TYPES[curve_fit_type](**kwargs)
 
 def collision_integral(ci_type, **kwargs):
     """

@@ -53,7 +53,7 @@ class TwoTempTransProp(TransProp):
         self._mu = {}
         for name_i in self._species_names:
             for name_j in self._species_names[self._species_names.index(name_i):]:
-                pair = (name_i, name_j)
+                pair = name_i, name_j
                 # construct the collision integrals
                 model = self._choose_col_int_model(ci_models, pair)
                 params_11 = self._get_col_int_parameters(model,
@@ -117,7 +117,7 @@ class TwoTempTransProp(TransProp):
         # decide which order collision integrals to use
         if order == (1, 1):
             ci = self._cis_11
-            factor = 8./3
+            factor = 8./3.
         elif order == (2, 2):
             ci = self._cis_22
             factor = 16./5.
@@ -126,13 +126,13 @@ class TwoTempTransProp(TransProp):
 
         # calculate all the deltas
         for name_i in self._species_names:
+            # choose temperature to use to evaluate collision integral
+            if name_i == "e-":
+                T_ci = gas_state["T_modes"][0]
+            else:
+                T_ci = gas_state["temp"]
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = (name_i, name_j)
-                # choose temperature to use to evaluate collision integral at
-                if name_i == "e-":
-                    T_ci = gas_state["T_modes"][0]
-                else:
-                    T_ci = gas_state["temp"]
                 # compute delta for this pair
                 tmp = factor*1.546e-20*np.sqrt(2.0*self._mu[pair]/(np.pi*1.987*T_ci))
                 deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
@@ -146,10 +146,10 @@ class TwoTempTransProp(TransProp):
         sumA = 0.0
         for name_i in self._species_names:
             denom = 0.0
-            if name_i == "e-": continue
             for name_j in self._species_names:
                 denom += gas_state["molef"][name_j]*delta_22[name_i, name_j]
-            sumA += self._particle_mass[name_i] * gas_state["molef"][name_i]/denom
+            if name_i == "e-": continue
+            sumA += self._particle_mass[name_i] * gas_state["molef"][name_i] / denom
         # add term if electron present.
         if "e-" in self._species_names:
             denom = 0.0
