@@ -63,6 +63,7 @@ def plot_co2_n2_viscosity():
                     alpha=0.5)
 
 def plot_n2_viscosity():
+    n2_trans_prop = TwoTempTransProp(air_gas_model)
     gupta_yos = collision_integral("gupta_yos", order=(2,2), curve_fit_type="pi_Omega",
                                     coeffs=[0.0, -0.0203, 0.0683, 4.09], species=("N2", "N2"))
 
