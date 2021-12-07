@@ -166,8 +166,8 @@ class TwoTempTransProp(TransProp):
 
 
 if __name__ == "__main__":
-    from tests.ci_models import ci_models_wright, ci_models_laricchiuta
-    from tests.air_gas_model import air as air_gas_model
+    from examples.ci_models import ci_models_wright, ci_models_laricchiuta
+    from examples.gas_models.air_gas_model import air as air_gas_model
     from eilmer.gas import GasModel, GasState
     import matplotlib.pyplot as plt
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     wright_trans_prop = TwoTempTransProp(air_gas_model, ci_models_wright)
     laricchiuta_trans_prop = TwoTempTransProp(air_gas_model, ci_models_laricchiuta)
 
-    gmodel = GasModel("tests/two_temp_gas_5_species.lua")
+    gmodel = GasModel("examples/two_temp_gas_5_species.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
     gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}
