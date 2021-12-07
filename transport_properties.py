@@ -133,7 +133,7 @@ class TwoTempTransProp(TransProp):
                 else:
                     T_ci = gas_state["temp"]
                 # compute delta for this pair
-                tmp = factor*1.546e-20*np.sqrt(2*self._mu[pair]/(np.pi*8.31451*T_ci))
+                tmp = factor*1.546e-20*np.sqrt(2.0*self._mu[pair]/(np.pi*1.987*T_ci))
                 deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
                 # the pair written in opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
