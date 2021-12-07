@@ -1,4 +1,4 @@
-air = {
+air_5_species = {
     "N2": {
         "type": "molecule",
         "M": 2.80134e-2,
