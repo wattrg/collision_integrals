@@ -63,9 +63,9 @@ def plot_co2_viscosity():
                     unp.nominal_values(mu_w)+unp.std_devs(mu_w),
                     alpha=0.5)
     ax.set_ylim(bottom=0)
-    plt.legend([l, (w, w_fill)], ["Laricchiuta", "Wright"])
+    plt.legend([l, (w, w_fill)], ["Laricchiuta", "Wright (Eilmer)"])
     ax.set_xlabel("Temperature [K]")
-    ax.set_ylabel("Visocisity [g/cm/s]")
+    ax.set_ylabel("Visocisity [kg/m/s]")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     ax.set_title("$CO_2$ viscosity")
     ax.grid()
