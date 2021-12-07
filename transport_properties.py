@@ -7,6 +7,7 @@
 from collision_integrals import collision_integral
 from data.gupta_yos_data import gupta_yos_data
 import numpy as np
+import uncertainties.unumpy as unp
 from abc import ABC, abstractmethod
 
 AVOGADRO_NUMBER = 6.022e23
@@ -33,7 +34,7 @@ class TwoTempTransProp(TransProp):
         mixutre:
             Database of gas model
 
-        ci_models (Dict):
+        (optional) ci_models (Dict):
             The collision integral models to use. If no collision integral
             model is specified for a given pair, a default one will be chosen
         """
@@ -55,11 +56,13 @@ class TwoTempTransProp(TransProp):
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = name_i, name_j
                 # construct the collision integrals
-                model = self._choose_col_int_model(ci_models, pair)
+                model, params = self._choose_col_int_model(ci_models, pair)
                 params_11 = self._get_col_int_parameters(model,
                                                          pair, (1,1))
+                params_11.update(params)
                 params_22 = self._get_col_int_parameters(model,
                                                          pair, (2,2))
+                params_22.update(params)
                 self._cis_11[pair] = collision_integral(model, **params_11)
                 self._cis_11[pair[::-1]] = self._cis_11[pair]
                 self._cis_22[pair] = collision_integral(model, **params_22)
@@ -90,25 +93,25 @@ class TwoTempTransProp(TransProp):
 
     def _choose_col_int_model(self, ci_models, pair):
         # First, check if the user has asked for a particular model
-        model = ci_models.get(pair, None)
+        model, params = ci_models.get(pair, (None, {}))
         if model is not None:
-            return model
+            return model, params
         # maybe they've specified the pair in the opposite order
         model = ci_models.get(pair[::-1], None)
         if model is not None:
-            return model
+            return model, params
 
         # No user specified model, so choose the default one to apply
         # If Gupta-Yos is available, use that.
         if pair in gupta_yos_data or pair[::-1] in gupta_yos_data:
-            return "gupta_yos"
+            return "gupta_yos", {}
 
         # Gupta-Yos wasn't available. If both species are charged, use mason
         if ("+" in pair[0] or "-" in pair[0]) and ("+" in pair[1] or "-" in pair[1]):
-            return "mason"
+            return "mason", {}
 
         # The species weren't charged, use laricchiuta
-        return "laricchiuta"
+        return "laricchiuta", {}
 
     def _compute_delta(self, gas_state, order):
         # storage for the deltas
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     gmodel = GasModel("tests/two_temp_gas_5_species.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
-    gs.massf = {"N2": 0.8, "O2": 0.2}
+    gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
     temps = np.linspace(300, 3000, 100)
@@ -197,9 +200,17 @@ if __name__ == "__main__":
         wright_mus.append(wright_trans_prop.viscosity(gas_state))
         laricchiuta_mus.append(laricchiuta_trans_prop.viscosity(gas_state))
 
-    plt.plot(temps, eilmer_mus, 'k--', label="Eilmer/Eilmer")
-    plt.plot(temps, wright_mus, label="Wright")
-    plt.plot(temps, laricchiuta_mus, label="Laricchiuta")
-    plt.legend()
-    plt.ylim(bottom=0)
+    fig, ax = plt.subplots()
+    ax.plot(temps, eilmer_mus, 'k--', label="Eilmer/Eilmer")
+    ax.plot(temps, unp.nominal_values(wright_mus), 'k', label="Wright")
+    ax.fill_between(temps,
+                     unp.nominal_values(wright_mus)+unp.std_devs(wright_mus),
+                     unp.nominal_values(wright_mus)-unp.std_devs(wright_mus),
+                     alpha=0.5)
+    ax.plot(temps, laricchiuta_mus, 'k:', label="Laricchiuta")
+    ax.legend()
+    ax.set_ylim(bottom=0)
+    ax.grid()
+    ax.set_xlabel("Temperature [K]")
+    ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
     plt.show()

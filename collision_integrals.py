@@ -11,6 +11,7 @@ from scipy import optimize, interpolate
 from scipy.special import factorial
 from scipy import integrate
 import numpy as np
+from uncertainties import ufloat
 import matplotlib.pyplot as plt
 from data.wright_ci_data import wright_ci_data
 from data.Laricchiuta import laricchiuta_coeffs
@@ -45,6 +46,11 @@ class ColIntModel(ABC):
                     self._charge[i] = 0
 
         self._model = kwargs["model"]
+
+        self._acc = kwargs.get("acc", None)
+        self._eval_acc = kwargs.get("eval_acc", False)
+        if not self._acc and self._eval_acc:
+            self._eval_acc = False
 
     def get_charge(self):
         """ Return the charge of the species """
@@ -374,6 +380,17 @@ class ColIntCurveFitOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d)
 
 
+class ColIntWright(ColIntCurveFitOmega):
+    """
+    Collision integrals from Wright et. al.
+    """
+
+    def eval(self, gas_state):
+        col_int = super().eval(gas_state)
+        if self._eval_acc:
+            col_int = ufloat(col_int, self._acc*col_int)
+        return col_int
+
 class ColIntGuptaYos(ColIntCurveFitPiOmega):
     """
     Collision integral from Gupta Yos
@@ -437,9 +454,6 @@ class ColIntCurveFitCollection:
 def col_int_wright(**kwargs):
     """
     Create a collision integral from Wright et al
-
-    This just creates a curve fit collision integral,
-    but points it to the data by wright
     """
     try:
         species = kwargs["species"]
@@ -450,8 +464,9 @@ def col_int_wright(**kwargs):
     data = wright_ci_data[f"{species[0]}:{species[1]}"][f"Omega_{order[0]}{order[1]}"]
     kwargs["temps"] = data["temps"]
     kwargs["cis"] = data["cis"]
+    kwargs["acc"] = data["acc"]
     kwargs["curve_fit_type"] = "Omega"
-    return col_int_curve_fit(**kwargs)
+    return ColIntWright(**kwargs)
 
 def col_int_curve_fit(**kwargs):
     """
@@ -518,4 +533,6 @@ if __name__ == "__main__":
         "wright",
         order=(1,1),
         species=("N2", "N2"),
+        eval_acc=True
     )
+    print(ci.eval(gas_state))
