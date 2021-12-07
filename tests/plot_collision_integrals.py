@@ -158,9 +158,9 @@ def plot_N2p_N2p_interaction():
                                           species=("N2+", "N2+"))
 
     # setup the gas state
-    temps = np.linspace(300, 15000, 50)
-    gas_state = {"temp": temps, "ne": 1e20}
-    gas_state = {"temp": temps, "ep": 100000}
+    temps = np.linspace(300, 15000, 100)
+    #gas_state = {"temp": temps, "ne": 1e20}
+    gas_state = {"temp": temps, "ep": 1000}
     #ep_from_ne(gas_state)
     ne_from_ep(gas_state)
 
