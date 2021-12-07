@@ -16,11 +16,11 @@ class TransProp(ABC):
 
     @abstractmethod
     def viscosity(self, gas_state):
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def thermal_conductivity(self, gas_state):
-        pass
+        raise NotImplementedError()
 
 
 class TwoTempTransProp(TransProp):
@@ -68,9 +68,8 @@ class TwoTempTransProp(TransProp):
                 # calculate reduced mass
                 mu_a = gas_model[name_i]["M"]
                 mu_b = gas_model[name_j]["M"]
-                self._mu[pair] = mu_a * mu_b / (mu_a + mu_b) * 1000
+                self._mu[pair] = mu_a * mu_b / (mu_a + mu_b) * 1000 # kg -> g
                 self._mu[pair[::-1]] = self._mu[pair]
-
 
     def _get_col_int_parameters(self, ci_model, pair, order):
         params = {"order": order, "species": pair}
@@ -121,7 +120,9 @@ class TwoTempTransProp(TransProp):
             factor = 8./3
         elif order == (2, 2):
             ci = self._cis_22
-            factor = 16./5
+            factor = 16./5.
+        else:
+            raise NotImplementedError(f"deltas for order = {order} not implemented")
 
         # calculate all the deltas
         for name_i in self._species_names:
@@ -135,11 +136,12 @@ class TwoTempTransProp(TransProp):
                 # compute delta for this pair
                 tmp = factor*1.546e-20*np.sqrt(2.0*self._mu[pair]/(np.pi*1.987*T_ci))
                 deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
-                # the pair written in opposite order is the same
+                # the pair written in the opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
         return deltas
 
     def viscosity(self, gas_state):
+        assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
         delta_22 = self._compute_delta(gas_state, (2, 2))
         sumA = 0.0
         for name_i in self._species_names:
@@ -154,7 +156,7 @@ class TwoTempTransProp(TransProp):
             for name_j in self._species_names:
                 denom += gas_state["molef"][name_j]*delta_22["e-", name_j]
             sumA += self._particle_mass["e-"]*gas_state["molef"]["e-"]/denom
-        return sumA * (1e-3/1e-2)
+        return sumA * 1e-1 # g/(cm*s) -> kg/(m*s)
 
     def thermal_conductivity(gas_state):
         raise Exception("thermal conductivity not implemented for two temperature gas")
