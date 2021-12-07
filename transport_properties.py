@@ -163,37 +163,43 @@ class TwoTempTransProp(TransProp):
 
 
 if __name__ == "__main__":
-    from tests.ci_models import ci_models
-    from tests.air_gas_model import air
+    from tests.ci_models import ci_models_wright, ci_models_laricchiuta
+    from tests.air_gas_model import air as air_gas_model
     from eilmer.gas import GasModel, GasState
     import matplotlib.pyplot as plt
 
-    trans_prop = TwoTempTransProp(air, ci_models)
+    gupta_trans_prop = TwoTempTransProp(air_gas_model)
+    wright_trans_prop = TwoTempTransProp(air_gas_model, ci_models_wright)
+    laricchiuta_trans_prop = TwoTempTransProp(air_gas_model, ci_models_laricchiuta)
 
-    gmodel = GasModel("tests/two_temp_gas.lua")
+    gmodel = GasModel("tests/two_temp_gas_5_species.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
-    gs.massf = {"N2": 1.0, "O2": 0.0}
+    gs.massf = {"N2": 0.8, "O2": 0.2}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
     temps = np.linspace(300, 3000, 100)
     eilmer_mus = []
-    my_mus = []
+    gupta_mus = []
+    wright_mus = []
+    laricchiuta_mus = []
     for temp in temps:
-        # eilmer formulation
+        # update gas state
         gs.T = temp
         gs.T_modes = [temp]
         gs.update_thermo_from_pT()
+        gas_state["temp"] = temp
+
+        # update viscosity
         gs.update_trans_coeffs()
         eilmer_mus.append(gs.mu)
+        gupta_mus.append(gupta_trans_prop.viscosity(gas_state))
+        wright_mus.append(wright_trans_prop.viscosity(gas_state))
+        laricchiuta_mus.append(laricchiuta_trans_prop.viscosity(gas_state))
 
-        # current formulation
-        gas_state["temp"] = temp
-        my_mus.append(trans_prop.viscosity(gas_state))
-
-    plt.plot(temps, eilmer_mus, 'k--', label="Eilmer")
-    plt.plot(temps, np.array(my_mus)/(my_mus[0]/eilmer_mus[0]), label="Current")
-    print(my_mus[0]/eilmer_mus[0])
+    plt.plot(temps, eilmer_mus, 'k--', label="Eilmer/Eilmer")
+    plt.plot(temps, wright_mus, label="Wright")
+    plt.plot(temps, laricchiuta_mus, label="Laricchiuta")
     plt.legend()
     plt.ylim(bottom=0)
     plt.show()
