@@ -26,6 +26,34 @@ ci_models_laricchiuta = {
     ("NO", "NO"): ("laricchiuta", {"param_priority": "polarisability"}),
 }
 
+ci_models_laricchiuta_non_polar = {
+    ("N2", "N2"): ("laricchiuta", {}),
+    ("N2", "O2"): ("laricchiuta", {}),
+    ("N2", "N"):  ("laricchiuta", {}),
+    ("N2", "O"):  ("laricchiuta", {}),
+    ("N2", "NO"): ("laricchiuta", {}),
+    ("O2", "N2"): ("laricchiuta", {}),
+    ("O2", "O2"): ("laricchiuta", {}),
+    ("O2", "N"):  ("laricchiuta", {}),
+    ("O2", "O"):  ("laricchiuta", {}),
+    ("O2", "NO"): ("laricchiuta", {}),
+    ("N", "N2"):  ("laricchiuta", {}),
+    ("N", "O2"):  ("laricchiuta", {}),
+    ("N", "N"):   ("laricchiuta", {}),
+    ("N", "O"):   ("laricchiuta", {}),
+    ("N", "NO"):  ("laricchiuta", {}),
+    ("O", "N2"):  ("laricchiuta", {}),
+    ("O", "O2"):  ("laricchiuta", {}),
+    ("O", "N"):   ("laricchiuta", {}),
+    ("O", "O"):   ("laricchiuta", {}),
+    ("O", "NO"):  ("laricchiuta", {}),
+    ("NO", "N2"): ("laricchiuta", {}),
+    ("NO", "O2"): ("laricchiuta", {}),
+    ("NO", "N"):  ("laricchiuta", {}),
+    ("NO", "O"):  ("laricchiuta", {}),
+    ("NO", "NO"): ("laricchiuta", {}),
+}
+
 ci_models_wright = {
     ("N2", "N2"): ("wright", {"eval_acc":True}),
     ("N2", "O2"): ("wright", {"eval_acc":True}),
