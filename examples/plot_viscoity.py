@@ -2,8 +2,6 @@ import numpy as np
 from uncertainties import unumpy as unp
 import uncertainties as unct
 from matplotlib import pyplot as plt
-from data.wright_ci_data import wright_ci_data
-from collision_integrals import collision_integral, ColIntCurveFitCollection
 from transport_properties import TwoTempTransProp
 from examples.gas_models.N2 import nitrogen
 from examples.gas_models.CO2 import carbon_dioxide
