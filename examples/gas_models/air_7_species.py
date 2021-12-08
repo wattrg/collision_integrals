@@ -6,7 +6,8 @@ air_7_species = {
         "sigma": 3.621,
         "epsilon": 97.53,
         "charge": 0,
-        "polarisability": 0.628,
+        "polarisability": 1.71,
+        "N": 10,
     },
     "O2": {
         "type": "molecule",

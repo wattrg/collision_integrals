@@ -11,9 +11,10 @@ from ci_models import ci_models_laricchiuta, ci_models_wright
 
 
 def plot_n2_viscosity():
-    wright = TwoTempTransProp(nitrogen, ci_models_wright)
+    wright = TwoTempTransProp(nitrogen, {("N2", "N2"): ("wright", {"eval_acc": True})})
     gupta = TwoTempTransProp(nitrogen)
-    laricchiuta = TwoTempTransProp(nitrogen, ci_models_laricchiuta)
+    laricchiuta = TwoTempTransProp(nitrogen,
+                                   {("N2", "N2"): ("laricchiuta", {"param_priority": "polarisability"})})
 
     temps = np.linspace(300, 3000, 100)
     gas_state = {"molef": {"N2": 1.0}}
@@ -46,7 +47,7 @@ def plot_co2_viscosity():
     temps = np.linspace(300, 3000, 100)
     gas_state = {"molef": {"CO2": 1.0}}
     wright = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("wright", {"eval_acc": True})})
-    laricchiuta = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("laricchiuta", {})})
+    laricchiuta = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"})})
 
     mu_l = []
     mu_w = []

@@ -5,5 +5,7 @@ nitrogen = {
         "sigma": 3.621,
         "epsilon": 97.53,
         "charge": 0,
+        "polarisability": 1.71,
+        "N": 10,
     },
 }

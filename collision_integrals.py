@@ -251,23 +251,19 @@ class ColIntLaricchiuta(ColIntModel):
             raise Exception("Invalid collision type for Laricchiuta integrals")
 
         # physical parameters
-        if "sigma" in kwargs:
-            self._sigma = kwargs["sigma"]
-            self._epsilon = kwargs["epsilon"]
-            self._beta = kwargs.get("beta", 8)
-        elif "alphas" in kwargs:
-            self._alphas = kwargs["alphas"]
-            self._Ns = kwargs["Ns"]
-            self._compute_parameters()
-        elif "alpha" in kwargs:
-            alpha = kwargs["alpha"]
-            N = kwargs["N"]
-            self._alphas = np.array([alpha, alpha])
-            self._Ns = np.array([N, N])
-            self._compute_parameters()
+        param_priority = kwargs.get("param_priority", "LJ")
+        if param_priority == "LJ":
+            if not self._get_sigma_epsilon(kwargs):
+                if not self._get_alphas(kwargs):
+                    if not self._get_alpha(kwargs):
+                        raise KeyError("No parameters to Laricchiuta model provided")
+        elif param_priority == "polarisability":
+            if not self._get_alphas(kwargs):
+                if not self._get_alpha(kwargs):
+                    if not self._get_sigma_epsilon(kwargs):
+                        raise KeyError("No parameters to Laricchiuta model provided")
         else:
-            raise ValueError("No sigma or alpha value provided")
-
+            raise KeyError("Unknown parameter priority")
 
         # compute x_0
         self._x_0 = self._zeta[0] * self._beta ** self._zeta[1]
@@ -282,6 +278,35 @@ class ColIntLaricchiuta(ColIntModel):
             for j, c in enumerate(self._cs[i + 1]):
                 coeff += c * self._beta**j
             self._coeffs.append(coeff)
+
+    def _get_sigma_epsilon(self, kwargs):
+        try:
+            self._sigma = kwargs["sigma"]
+            self._epsilon = kwargs["epsilon"]
+            self._beta = kwargs.get("beta", 8)
+            return True
+        except KeyError:
+            return False
+
+    def _get_alphas(self, kwargs):
+        try:
+            self._alphas = kwargs["alphas"]
+            self._Ns = kwargs["Ns"]
+            self._compute_parameters()
+            return True
+        except KeyError:
+            return False
+
+    def _get_alpha(self, kwargs):
+        try:
+            alpha = kwargs["alpha"]
+            N = kwargs["N"]
+            self._Ns = np.array([N, N])
+            self._alphas = np.array([alpha, alpha])
+            self._compute_parameters()
+            return True
+        except KeyError:
+            return False
 
     def get_col_type(self):
         """ Return type of collision """

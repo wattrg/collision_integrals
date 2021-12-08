@@ -56,13 +56,11 @@ class TwoTempTransProp(TransProp):
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = name_i, name_j
                 # construct the collision integrals
-                model, params = self._choose_col_int_model(ci_models, pair)
+                model, user_params = self._choose_col_int_model(ci_models, pair)
                 params_11 = self._get_col_int_parameters(model,
-                                                         pair, (1,1))
-                params_11.update(params)
+                                                         pair, (1,1), user_params)
                 params_22 = self._get_col_int_parameters(model,
-                                                         pair, (2,2))
-                params_22.update(params)
+                                                         pair, (2,2), user_params)
                 self._cis_11[pair] = collision_integral(model, **params_11)
                 self._cis_11[pair[::-1]] = self._cis_11[pair]
                 self._cis_22[pair] = collision_integral(model, **params_22)
@@ -74,21 +72,30 @@ class TwoTempTransProp(TransProp):
                 self._mu[pair] = mu_a * mu_b / (mu_a + mu_b) * 1000 # kg -> g
                 self._mu[pair[::-1]] = self._mu[pair]
 
-    def _get_col_int_parameters(self, ci_model, pair, order):
+    def _get_col_int_parameters(self, ci_model, pair, order, user_params):
         params = {"order": order, "species": pair}
         if ci_model == "gupta_yos":
             if pair not in gupta_yos_data:
                 pair = pair[::-1]
             params["coeffs"] = gupta_yos_data[pair][order]
         elif ci_model == "laricchiuta":
-            sigma_a = self._gas_model[pair[0]]["sigma"]
-            sigma_b = self._gas_model[pair[1]]["sigma"]
-            params["sigma"] = 0.5 * (sigma_a + sigma_b)
-            epsilon_a = self._gas_model[pair[0]]["epsilon"]
-            epsilon_b = self._gas_model[pair[1]]["epsilon"]
-            params["epsilon"] = np.sqrt(epsilon_a * epsilon_b)
+            sigma_a = self._gas_model[pair[0]].get("sigma", None)
+            sigma_b = self._gas_model[pair[1]].get("sigma", None)
+            if sigma_a and sigma_b:
+                params["sigma"] = 0.5 * (sigma_a + sigma_b)
+            epsilon_a = self._gas_model[pair[0]].get("epsilon", None)
+            epsilon_b = self._gas_model[pair[1]].get("epsilon", None)
+            if epsilon_a and epsilon_b:
+                params["epsilon"] = np.sqrt(epsilon_a * epsilon_b)
+            if "polarisability" in self._gas_model[pair[0]] and "polarisability" in self._gas_model[pair[1]]:
+                params["alphas"] = [self._gas_model[pair[0]]["polarisability"],
+                                    self._gas_model[pair[1]]["polarisability"]]
+            if "N" in self._gas_model[pair[0]] and "N" in self._gas_model[pair[1]]:
+                params["Ns"] = [self._gas_model[pair[0]]["N"],
+                                self._gas_model[pair[1]]["N"]]
         elif ci_model == "mason":
             pass
+        params.update(user_params)
         return params
 
     def _choose_col_int_model(self, ci_models, pair):
@@ -97,7 +104,7 @@ class TwoTempTransProp(TransProp):
         if model is not None:
             return model, params
         # maybe they've specified the pair in the opposite order
-        model = ci_models.get(pair[::-1], None)
+        model, params = ci_models.get(pair[::-1], (None, {}))
         if model is not None:
             return model, params
 
@@ -178,7 +185,8 @@ if __name__ == "__main__":
     gmodel = GasModel("examples/two_temp_gas_5_species.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
-    gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}
+    #gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}
+    gs.massf = {"N2": 0.8, "O2": 0.2}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
     temps = np.linspace(300, 5000, 100)
