@@ -7,6 +7,7 @@ from collision_integrals import collision_integral, ColIntCurveFitCollection
 from transport_properties import TwoTempTransProp
 from examples.gas_models.N2 import nitrogen
 from examples.gas_models.CO2 import carbon_dioxide
+from examples.gas_models.nitrogen_oxygen import nitrogen_oxygen
 from ci_models import ci_models_laricchiuta, ci_models_wright, ci_models_laricchiuta_non_polar
 from examples.gas_models.air_5_species import air_5_species
 from eilmer.gas import GasModel, GasState
@@ -18,7 +19,7 @@ def plot_n2_viscosity():
     laricchiuta = TwoTempTransProp(nitrogen,
                                    {("N2", "N2"): ("laricchiuta", {"param_priority": "polarisability"})})
 
-    temps = np.linspace(300, 3000, 100)
+    temps = np.linspace(300, 5000, 100)
     gas_state = {"molef": {"N2": 1.0}}
 
     wright_mus, gupta_mus, laricchiuta_mus = [], [], []
@@ -46,7 +47,7 @@ def plot_n2_viscosity():
     plt.savefig("./figs/N2_viscosity.png")
 
 def plot_co2_viscosity():
-    temps = np.linspace(300, 3000, 100)
+    temps = np.linspace(300, 5000, 100)
     gas_state = {"molef": {"CO2": 1.0}}
     wright = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("wright", {"eval_acc": True})})
     laricchiuta = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"})})
@@ -125,9 +126,48 @@ def plot_5_species_air_mixture():
     ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
 
+def plot_co2_n2_viscosity():
+    wright_ci_models = {
+        ("CO2", "CO2"): ("wright", {"eval_acc": True}),
+        ("N2", "N2"): ("wright", {"eval_acc": True}),
+        ("CO2", "N2"): ("wright", {"eval_acc": True})
+    }
+    laricchiuta_ci_models = {
+        ("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"}),
+        ("N2", "N2"):   ("laricchiuta", {"param_priority": "polarisability"}),
+        ("CO2", "N2"):  ("laricchiuta", {"param_priority": "polarisability"})
+    }
+    trans_prop_laricchiuta = TwoTempTransProp(nitrogen_oxygen, laricchiuta_ci_models)
+    trans_prop_wright = TwoTempTransProp(nitrogen_oxygen, wright_ci_models)
+
+    temps = np.linspace(300, 5000, 100)
+    gas_state = {"molef": {"N2": 0.05, "CO2": 0.95}}
+
+    mu_l = []
+    mu_w = []
+    for temp in temps:
+        gas_state["temp"] = temp
+        mu_l.append(trans_prop_laricchiuta.viscosity(gas_state))
+        mu_w.append(trans_prop_wright.viscosity(gas_state))
+
+    fig, ax = plt.subplots()
+    line_l, = ax.plot(temps, mu_l, 'k--')
+    line_w, = ax.plot(temps, unp.nominal_values(mu_w), 'k')
+    fill_w = ax.fill_between(temps,
+                     unp.nominal_values(mu_w)+unp.std_devs(mu_w),
+                     unp.nominal_values(mu_w)-unp.std_devs(mu_w),
+                     alpha=0.5)
+    ax.legend([line_l, (line_w, fill_w)],
+              ["Laricchiuta", "Wright"])
+    ax.set_ylim(bottom=0)
+    ax.grid()
+    ax.set_xlabel("Temperature [K]")
+    ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
 
 if __name__ == "__main__":
     plot_n2_viscosity()
     plot_co2_viscosity()
     plot_5_species_air_mixture()
+    plot_co2_n2_viscosity()
     plt.show()
