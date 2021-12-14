@@ -46,7 +46,7 @@ def plot_n2_viscosity():
 
 
 def plot_co2_viscosity():
-    temps = np.linspace(300, 5000, 100)
+    temps = np.linspace(300, 30000, 100)
     gas_state = {"molef": {"CO2": 1.0}}
     wright = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("wright", {"eval_acc": True})})
     laricchiuta = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"})})
