@@ -139,6 +139,7 @@ class MasonColInt(ColIntModel):
             kwargs["model"] = "mason"
         super().__init__(**kwargs)
         assert self._l == self._s, "l must equal s"
+        charge = kwargs["charge"]
 
         # repulsive potential
         if self._charge[0] * self._charge[1] > 0:

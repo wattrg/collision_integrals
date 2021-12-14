@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from data.wright_ci_data import wright_ci_data
 
+plt.rcParams["savefig.dpi"] = 600
 
 def ci_comparison_n2():
     """
