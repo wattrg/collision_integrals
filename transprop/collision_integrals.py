@@ -13,8 +13,10 @@ from scipy import integrate
 import numpy as np
 from uncertainties import ufloat
 import matplotlib.pyplot as plt
+
 from data.wright_ci_data import wright_ci_data
 from data.Laricchiuta import laricchiuta_coeffs
+from data.gupta_yos_data import gupta_yos_data
 from abc import ABC, abstractmethod
 
 
@@ -419,6 +421,16 @@ class ColIntGuptaYos(ColIntCurveFitPiOmega):
     """
     Collision integral from Gupta Yos
     """
+
+    def __init__(self, **kwargs):
+        if "coeffs" not in kwargs:
+            species = kwargs["species"]
+            if species in gupta_yos_data:
+                kwargs["coeffs"] = gupta_yos_data[species]
+            elif species[::-1] in gupta_yos_data:
+                kwargs["coeffs"] = gupta_yos_data[species[::-1]]
+            else:
+                raise KeyError(f"Couldn't find collision {species} in gupta yos data")
 
     def eval(self, gas_state):
         col_int = super().eval(gas_state)

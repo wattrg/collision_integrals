@@ -2,12 +2,12 @@ import numpy as np
 from uncertainties import unumpy as unp
 import uncertainties as unct
 from matplotlib import pyplot as plt
-from transport_properties import TwoTempTransProp
-from examples.gas_models.N2 import nitrogen
-from examples.gas_models.CO2 import carbon_dioxide
-from examples.gas_models.nitrogen_oxygen import nitrogen_oxygen
+from transprop.transport_properties import TwoTempTransProp
+from gas_models.N2 import nitrogen
+from gas_models.CO2 import carbon_dioxide
+from gas_models.nitrogen_oxygen import nitrogen_oxygen
 from ci_models import ci_models_laricchiuta, ci_models_wright, ci_models_laricchiuta_non_polar
-from examples.gas_models.air_5_species import air_5_species
+from gas_models.air_5_species import air_5_species
 from eilmer.gas import GasModel, GasState
 
 
@@ -80,7 +80,7 @@ def plot_5_species_air_mixture():
     laricchiuta_trans_prop = TwoTempTransProp(air_5_species, ci_models_laricchiuta)
     laricchiuta_trans_prop_np = TwoTempTransProp(air_5_species, ci_models_laricchiuta_non_polar)
 
-    gmodel = GasModel("examples/two_temp_gas_5_species.lua")
+    gmodel = GasModel("two_temp_gas_5_species.lua")
     gs = GasState(gmodel)
     gs.p = 1e5
     #gs.massf = {"N2": 0.8, "O2": 0.1, "O": 0.05, "N": 0.05}

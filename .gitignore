@@ -3,3 +3,4 @@ collision_integral.org
 figs/
 *.png
 *flycheck*
+transprop.egg-info/

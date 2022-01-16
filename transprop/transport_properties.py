@@ -4,7 +4,7 @@
 #
 # Author: Robert Watt
 
-from collision_integrals import collision_integral
+from .collision_integrals import collision_integral
 from data.gupta_yos_data import gupta_yos_data
 import numpy as np
 import uncertainties.unumpy as unp
