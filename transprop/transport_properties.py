@@ -52,6 +52,7 @@ class TwoTempTransProp(TransProp):
         self._cis_11 = {}
         self._cis_22 = {}
         self._mu = {}
+        self._alpha = {}
         for name_i in self._species_names:
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = name_i, name_j
@@ -71,6 +72,13 @@ class TwoTempTransProp(TransProp):
                 mu_b = gas_model[name_j]["M"]
                 self._mu[pair] = mu_a * mu_b / (mu_a + mu_b) * 1000 # kg -> g
                 self._mu[pair[::-1]] = self._mu[pair]
+
+                # compute alpha
+                M_ratio = gas_model[name_i]["M"]/gas_model[name_j]["M"]
+                denom = (1 + M_ratio)**2
+                numer = (1 - M_ratio) * (0.45 - 2.54*M_ratio)
+                self._alpha[name_i, name_j] = 1 + numer/denom
+                self._alpha[name_j, name_i] = self._alpha[name_i, name_j]
 
     def _get_col_int_parameters(self, ci_model, pair, order, user_params):
         params = {"order": order, "species": pair}
@@ -151,6 +159,9 @@ class TwoTempTransProp(TransProp):
         return deltas
 
     def viscosity(self, gas_state):
+        """
+        Compute the viscosity of a mixture in `gas_state`
+        """
         assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
         delta_22 = self._compute_delta(gas_state, (2, 2))
         sumA = 0.0
@@ -168,7 +179,51 @@ class TwoTempTransProp(TransProp):
             sumA += self._particle_mass["e-"]*gas_state["molef"]["e-"]/denom
         return sumA * 1e-1 # g/(cm*s) -> kg/(m*s)
 
-    def thermal_conductivity(gas_state):
-        raise Exception("thermal conductivity not implemented for two temperature gas")
+    def thermal_conductivity(self, gas_state):
+        """
+        Compute the thermal conductivity of a mixture in `gas_state`
+        """
+        assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
+        delta_22 = self._compute_delta(gas_state, (2, 2))
+        delta_11 = self._compute_delta(gas_state, (1, 1))
 
+        # 1. k_tr
+        sumA = 0.0
+        for name_i in self._species_names:
+            denom = 0.0
+            for name_j in self._species_names:
+                if name_j != "e-":
+                    denom += self._alpha[name_i, name_j]*gas_state["molef"][name_j]*delta_22[name_i, name_j]
+                else:
+                    denom += 3.54*self._alpha[name_i, name_j]*gas_state["molef"][name_j]*delta_22[name_i, name_j]
+            if name_i == "e-": continue
+            sumA += gas_state["molef"][name_i]/denom
+        kB_erg = 1.38066e-16
+        k_tr = 2.3901e-8*(15/4)*kB_erg*sumA
+        k_tr *= 4.184/1e-2
 
+        # 2. k_rot
+        # assuming fully excited, eq (75) in Gnoffo
+        k_rot = 0.0
+        for name_i in self._species_names:
+            if self._gas_model[name_i]["type"] == "molecule":
+                denom = 0.0
+                for name_j in self._species_names:
+                    denom += gas_state["molef"][name_j]*delta_11[name_i, name_j]
+                k_rot += gas_state["molef"][name_i]/denom
+        k_rot *= 2.3901e-8*kB_erg
+        k_rot *= 4.184/1e-2
+
+        # 3. k_vib = k_rot
+        k_vib = k_rot
+
+        # 4. k_e
+        k_E = 0.0
+        if "e-" in self._species_names:
+            denom = 0.0
+            for name_j in self._species_names:
+                denom += 1.45*gas_state["molef"][name_j]*delta_22["e-", name_j]
+            k_E = gas_state["molef"]["e-"]/denom
+            k_E *= 2.3901e-8 * (15/4)*kB_erg
+            k_E *= 4.184/1e-2
+        return k_tr + k_rot, [k_vib + k_E]
