@@ -431,6 +431,7 @@ class ColIntGuptaYos(ColIntCurveFitPiOmega):
                 kwargs["coeffs"] = gupta_yos_data[species[::-1]]
             else:
                 raise KeyError(f"Couldn't find collision {species} in gupta yos data")
+        super().__init__(**kwargs)
 
     def eval(self, gas_state):
         col_int = super().eval(gas_state)
@@ -455,7 +456,7 @@ class ColIntCurveFitCollection:
         self._ci_coeffs = {}
         for pair, pair_ci in self._data.items():
             self._ci_coeffs[pair] = {}
-            species = pair.split(":")
+            species = pair
 
             # check if both species are charged
             charge = [0, 0]
@@ -465,15 +466,12 @@ class ColIntCurveFitCollection:
                 if "-" in pair[i]:
                     charge[i] = -1
 
-            for ii in ["11", "22"]:
-                # extract the numeric order from the string representation
-                l = int(ii[0])
-
-                self._ci_coeffs[pair][f"Omega_{ii}"] = col_int_curve_fit(
+            for order in [(1,1), (2,2)]:
+                self._ci_coeffs[pair][order] = col_int_curve_fit(
                     curve_fit_type=self._curve_fit_type,
-                    order=(l,l),
-                    temps=pair_ci[f"Omega_{ii}"]["temps"],
-                    cis=pair_ci[f"Omega_{ii}"]["cis"],
+                    order=order,
+                    temps=pair_ci[order]["temps"],
+                    cis=pair_ci[order]["cis"],
                     charge=charge,
                     species=species
                 )
@@ -496,7 +494,12 @@ def col_int_wright(**kwargs):
     except KeyError:
         raise KeyError("You must supply the species and order for Wright collision integrals")
 
-    data = wright_ci_data[f"{species[0]}:{species[1]}"][f"Omega_{order[0]}{order[1]}"]
+    if species in wright_ci_data:
+        data = wright_ci_data[species][order]
+    elif species[::-1] in wright_ci_data:
+        data = wright_ci_data[species[::-1]][order]
+    else:
+        raise KeyError(f"Couldn't find collision {species} in wright data base")
     kwargs["temps"] = data["temps"]
     kwargs["cis"] = data["cis"]
     kwargs["acc"] = data["acc"]
