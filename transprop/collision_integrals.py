@@ -467,7 +467,7 @@ class ColIntCurveFitCollection:
                     charge[i] = -1
 
             for order in [(1,1), (2,2)]:
-                self._ci_coeffs[pair][order] = col_int_curve_fit(
+                self._ci_coeffs[pair][order] = _col_int_curve_fit(
                     curve_fit_type=self._curve_fit_type,
                     order=order,
                     temps=pair_ci[order]["temps"],
@@ -484,7 +484,7 @@ class ColIntCurveFitCollection:
             return self._ci_coeffs[pair]
         return self._ci_coeffs
 
-def col_int_wright(**kwargs):
+def _col_int_wright(**kwargs):
     """
     Create a collision integral from Wright et al
     """
@@ -506,7 +506,7 @@ def col_int_wright(**kwargs):
     kwargs["curve_fit_type"] = "Omega"
     return ColIntWright(**kwargs)
 
-def col_int_curve_fit(**kwargs):
+def _col_int_curve_fit(**kwargs):
     """
     Factory for curve fitted collision integrals
     """
@@ -536,8 +536,8 @@ def collision_integral(ci_type, **kwargs):
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
-        "wright": col_int_wright,
-        "curve_fit": col_int_curve_fit,
+        "wright": _col_int_wright,
+        "curve_fit": _col_int_curve_fit,
         "mason": MasonColInt,
     }
 
