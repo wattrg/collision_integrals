@@ -171,7 +171,6 @@ def plot_N2p_N2p_interaction():
 
 
 def plot_curve_fit_data():
-    cfs = ColIntCurveFitCollection(ci_table=wright_ci_data, curve_fit_type="Omega")
     co2_co2_ci = collision_integral("wright", species=("CO2", "CO2"), order=(1,1))
     wright_co2_co2_temps = co2_co2_ci._temps
     wright_co2_co2_cis = co2_co2_ci._cis
