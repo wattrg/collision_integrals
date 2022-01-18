@@ -6,7 +6,6 @@
 #
 # Author: Robert Watt
 
-from eilmer.gas import GasModel, GasState
 from scipy import optimize, interpolate
 from scipy.special import factorial
 from scipy import integrate
