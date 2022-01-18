@@ -25,7 +25,7 @@ def plot_5_species_air_mixture():
     gs.massf = {"N2": 0.8, "O2": 0.2}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
-    temps = np.linspace(300, 30000, 100)
+    temps = np.linspace(500, 10000, 100)
     eilmer_mus = []
     gupta_mus = []
     wright_mus = []

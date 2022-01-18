@@ -12,12 +12,12 @@ from eilmer.gas import GasModel, GasState
 
 
 def plot_n2_viscosity():
-    wright = TwoTempTransProp(nitrogen, {("N2", "N2"): ("wright", {"eval_acc": True})})
+    wright = TwoTempTransProp(nitrogen, {("N2", "N2"): ("wright_table", {"eval_acc": True})})
     gupta = TwoTempTransProp(nitrogen)
     laricchiuta = TwoTempTransProp(nitrogen,
                                    {("N2", "N2"): ("laricchiuta", {"param_priority": "polarisability"})})
 
-    temps = np.linspace(300, 30000, 100)
+    temps = np.linspace(300, 10000, 100)
     gas_state = {"molef": {"N2": 1.0}}
 
     wright_mus, gupta_mus, laricchiuta_mus = [], [], []
@@ -46,9 +46,9 @@ def plot_n2_viscosity():
 
 
 def plot_co2_viscosity():
-    temps = np.linspace(300, 30000, 100)
+    temps = np.linspace(300, 10000, 100)
     gas_state = {"molef": {"CO2": 1.0}}
-    wright = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("wright", {"eval_acc": True})})
+    wright = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("wright_table", {"eval_acc": True})})
     laricchiuta = TwoTempTransProp(carbon_dioxide, {("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"})})
 
     mu_l = []
@@ -87,7 +87,7 @@ def plot_5_species_air_mixture():
     gs.massf = {"N2": 0.8, "O2": 0.2}
     molef = gs.molef_as_dict
     gas_state = {"molef": molef}
-    temps = np.linspace(300, 30000, 100)
+    temps = np.linspace(500, 10000, 100)
     eilmer_mus = []
     gupta_mus = []
     wright_mus = []
@@ -128,9 +128,9 @@ def plot_5_species_air_mixture():
 
 def plot_co2_n2_viscosity():
     wright_ci_models = {
-        ("CO2", "CO2"): ("wright", {"eval_acc": True}),
-        ("N2", "N2"): ("wright", {"eval_acc": True}),
-        ("CO2", "N2"): ("wright", {"eval_acc": True})
+        ("CO2", "CO2"): ("wright_table", {"eval_acc": True}),
+        ("N2", "N2"): ("wright_table", {"eval_acc": True}),
+        ("CO2", "N2"): ("wright_table", {"eval_acc": True})
     }
     laricchiuta_ci_models = {
         ("CO2", "CO2"): ("laricchiuta", {"param_priority": "polarisability"}),
@@ -140,7 +140,7 @@ def plot_co2_n2_viscosity():
     trans_prop_laricchiuta = TwoTempTransProp(nitrogen_oxygen, laricchiuta_ci_models)
     trans_prop_wright = TwoTempTransProp(nitrogen_oxygen, wright_ci_models)
 
-    temps = np.linspace(300, 30000, 100)
+    temps = np.linspace(300, 10000, 100)
     gas_state = {"molef": {"N2": 0.05, "CO2": 0.95}}
 
     mu_l = []

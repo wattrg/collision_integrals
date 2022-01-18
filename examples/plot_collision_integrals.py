@@ -18,11 +18,11 @@ def ci_comparison_n2():
     gupta_yos_n2_11 = collision_integral("gupta_yos", order=(1,1), curve_fit_type="pi_Omega",
                                          coeffs=[0.0, -0.0112, -0.1182, 4.8464],
                                          species=("N2", "N2"))
-    wright_et_al_n2_11 = collision_integral("wright", order=(1,1), species=("N2", "N2"))
+    wright_et_al_n2_11 = collision_integral("wright_table", order=(1,1), species=("N2", "N2"))
     gupta_yos_n2_22 = collision_integral("gupta_yos", order=(2,2), curve_fit_type="pi_Omega",
                                          coeffs=[0.0, -0.0203, 0.0683, 4.09],
                                          species=("N2", "N2"))
-    wright_et_al_n2_22 = collision_integral("wright", order=(2,2), species=("N2", "N2"))
+    wright_et_al_n2_22 = collision_integral("wright_table", order=(2,2), species=("N2", "N2"))
     laricchiuta_n2_n2_11 = collision_integral("laricchiuta", order=(1,1), alpha=1.71, N=8,
                                               species=("N2", "N2"))
     laricchiuta_n2_n2_22 = collision_integral("laricchiuta", order=(2,2), alpha=1.71, N=8,
@@ -75,10 +75,10 @@ def ci_comparison_co2():
     laricchiuta_omega_co2_co2_22 = laricchiuta_co2_co2_22.eval(gas_state)
     laricchiuta_omega_co2_n2_22 = laricchiuta_co2_n2_22.eval(gas_state)
 
-    wright_omega_co2_co2_11 = collision_integral("wright", species=("CO2", "CO2"), order=(1,1)).eval(gas_state)
-    wright_omega_co2_co2_22 = collision_integral("wright", species=("CO2", "CO2"), order=(2,2)).eval(gas_state)
-    wright_omega_co2_n2_11 = collision_integral("wright", species=("CO2", "N2"), order=(1,1)).eval(gas_state)
-    wright_omega_co2_n2_22 = collision_integral("wright", species=("CO2", "N2"), order=(2,2)).eval(gas_state)
+    wright_omega_co2_co2_11 = collision_integral("wright_table", species=("CO2", "CO2"), order=(1,1)).eval(gas_state)
+    wright_omega_co2_co2_22 = collision_integral("wright_table", species=("CO2", "CO2"), order=(2,2)).eval(gas_state)
+    wright_omega_co2_n2_11 = collision_integral("wright_table", species=("CO2", "N2"), order=(1,1)).eval(gas_state)
+    wright_omega_co2_n2_22 = collision_integral("wright_table", species=("CO2", "N2"), order=(2,2)).eval(gas_state)
 
     fig_co2_co2, ax_co2_co2 = plt.subplots(2, 1, sharex=True)
     fig_co2_co2.suptitle("$CO_2$ - $CO_2$ Collision Integrals")
@@ -171,7 +171,7 @@ def plot_N2p_N2p_interaction():
 
 
 def plot_curve_fit_data():
-    co2_co2_ci = collision_integral("wright", species=("CO2", "CO2"), order=(1,1))
+    co2_co2_ci = collision_integral("wright_curve_fit", species=("CO2", "CO2"), order=(1,1))
     wright_co2_co2_temps = co2_co2_ci._temps
     wright_co2_co2_cis = co2_co2_ci._cis
 

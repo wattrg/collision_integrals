@@ -349,6 +349,26 @@ class ColIntLaricchiuta(ColIntModel):
         return np.exp(ln_omega) * (self._x_0 * self._sigma)**2
 
 
+class ColIntTable(ColIntModel):
+    """ Tabulated collision integral """
+
+    def __init__(self, **kwargs):
+        self._temps = kwargs["temps"]
+        self._cis = kwargs["cis"]
+        self._kind = kwargs.get("kind", "linear")
+        self._acc = kwargs.get("acc", None)
+        self._eval_acc = kwargs.get("eval_acc", False)
+        self._interp = interpolate.interp1d(self._temps, self._cis, kind=self._kind)
+
+    def eval(self, gas_state):
+        col_int = self._interp(gas_state["temp"])
+        if self._eval_acc:
+            if not self._acc:
+                raise ValueError("Accuracy not specified for tabular collision integral")
+            col_int = ufloat(col_int, self._acc * col_int)
+        return col_int
+
+
 class ColIntCurveFitModel(ColIntModel):
     """ Base class for curve fitted collision integrals"""
 
@@ -406,7 +426,7 @@ class ColIntGYCurveFitOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class ColIntWright(ColIntGYCurveFitOmega):
+class ColIntWrightGYCurveFit(ColIntGYCurveFitOmega):
     """
     Collision integrals from Wright et. al.
     """
@@ -484,9 +504,30 @@ class ColIntCurveFitCollection:
             return self._ci_coeffs[pair]
         return self._ci_coeffs
 
-def _col_int_wright(**kwargs):
+def _col_int_wright_table(**kwargs):
+    """ Create a collision integral from Wright et al """
+    try:
+        species = kwargs["species"]
+        order = kwargs["order"]
+    except KeyError:
+        raise KeyError("You must supply the species and order for Wright collision integrals")
+
+    if species in wright_ci_data:
+        data = wright_ci_data[species][order]
+    elif species[::-1] in wright_ci_data:
+        data = wright_ci_data[species[::-1]][order]
+    else:
+        raise KeyError(f"Couldn't find collision {species} in wright data base")
+    kwargs["temps"] = data["temps"]
+    kwargs["cis"] = data["cis"]
+    kwargs["acc"] = data["acc"]
+    return ColIntTable(**kwargs)
+
+
+def _col_int_wright_gy_curve_fit(**kwargs):
     """
-    Create a collision integral from Wright et al
+    Create a collision integral from Wright et al, curve fitted to the form
+    given by Gupta-Yos
     """
     try:
         species = kwargs["species"]
@@ -504,7 +545,7 @@ def _col_int_wright(**kwargs):
     kwargs["cis"] = data["cis"]
     kwargs["acc"] = data["acc"]
     kwargs["curve_fit_type"] = "Omega"
-    return ColIntWright(**kwargs)
+    return ColIntWrightGYCurveFit(**kwargs)
 
 def _col_int_curve_fit(**kwargs):
     """
@@ -536,7 +577,9 @@ def collision_integral(ci_type, **kwargs):
     CI_TYPES = {
         "laricchiuta": ColIntLaricchiuta,
         "gupta_yos": ColIntGuptaYos,
-        "wright": _col_int_wright,
+        "wright_curve_fit": _col_int_wright_gy_curve_fit,
+        "wright_table": _col_int_wright_table,
+        "table": ColIntTable,
         "curve_fit": _col_int_curve_fit,
         "mason": MasonColInt,
     }
@@ -545,13 +588,13 @@ def collision_integral(ci_type, **kwargs):
 
 
 if __name__ == "__main__":
+    gas_state = {"ne": 1e20, "temp": 1000}
     ci = collision_integral(
         "mason",
         order=(1, 1),
         charge=(-1, -1),
         species=("NA", "NA")
     )
-    gas_state = {"ne": 1e20, "temp": 1000}
     print("collision integral = ", ci.eval(gas_state))
     print("temp star = ", ci._temp_star(gas_state))
     print("debye length = ", ci._debye_length(gas_state))
@@ -568,9 +611,16 @@ if __name__ == "__main__":
     print(ci.eval(gas_state))
 
     ci = collision_integral(
-        "wright",
+        "wright_curve_fit",
+        order=(1,1),
+        species=("N2", "N2"),
+        eval_acc=True
+    )
+    ci_table = collision_integral(
+        "wright_table",
         order=(1,1),
         species=("N2", "N2"),
         eval_acc=True
     )
     print(ci.eval(gas_state))
+    print(ci_table.eval(gas_state))
