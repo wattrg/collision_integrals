@@ -3,6 +3,8 @@ from transprop.collision_integrals import collision_integral, ColIntCurveFitColl
 import matplotlib.pyplot as plt
 import numpy as np
 from data.wright_ci_data import wright_ci_data
+import matplotlib as mpl
+mpl.rcParams["text.usetex"] = True
 
 
 def ci_comparison_n2():

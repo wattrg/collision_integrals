@@ -9,6 +9,8 @@ from gas_models.nitrogen_oxygen import nitrogen_oxygen
 from ci_models import ci_models_laricchiuta, ci_models_wright, ci_models_laricchiuta_non_polar
 from gas_models.air_5_species import air_5_species
 from eilmer.gas import GasModel, GasState
+import matplotlib as mpl
+mpl.rcParams["text.usetex"] = True
 
 def plot_5_species_air_mixture():
     gupta_trans_prop = TwoTempTransProp(air_5_species)
