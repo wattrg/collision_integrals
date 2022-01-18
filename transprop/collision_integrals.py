@@ -388,7 +388,7 @@ class ColIntCurveFitModel(ColIntModel):
         return f"{self._coeffs}"
 
 
-class ColIntCurveFitPiOmega(ColIntCurveFitModel):
+class ColIntGYCurveFitPiOmega(ColIntCurveFitModel):
     """ Curve fit of pi * Omega """
     _guess = [-0.01, 0.3, -2.5, 11]
     _model = "curve_fit_pi_omega"
@@ -397,7 +397,7 @@ class ColIntCurveFitPiOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d) / np.pi
 
 
-class ColIntCurveFitOmega(ColIntCurveFitModel):
+class ColIntGYCurveFitOmega(ColIntCurveFitModel):
     """ Curve fitted collision integral """
     _guess = [-0.01, 0.3, -2.5, 11]
     _model = "curve_fit_omega"
@@ -406,7 +406,7 @@ class ColIntCurveFitOmega(ColIntCurveFitModel):
         return omega_curve_fit(temp, a, b, c, d)
 
 
-class ColIntWright(ColIntCurveFitOmega):
+class ColIntWright(ColIntGYCurveFitOmega):
     """
     Collision integrals from Wright et. al.
     """
@@ -417,7 +417,7 @@ class ColIntWright(ColIntCurveFitOmega):
             col_int = ufloat(col_int, self._acc*col_int)
         return col_int
 
-class ColIntGuptaYos(ColIntCurveFitPiOmega):
+class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
     """
     Collision integral from Gupta Yos
     """
@@ -511,8 +511,8 @@ def col_int_curve_fit(**kwargs):
     Factory for curve fitted collision integrals
     """
     CURVE_FIT_TYPES = {
-        "Omega": ColIntCurveFitOmega,
-        "pi_Omega": ColIntCurveFitPiOmega,
+        "Omega": ColIntGYCurveFitOmega,
+        "pi_Omega": ColIntGYCurveFitPiOmega,
     }
 
     curve_fit_type = kwargs["curve_fit_type"]
