@@ -350,6 +350,7 @@ class ColIntLaricchiuta(ColIntModel):
 
 class ColIntTable(ColIntModel):
     """ Tabulated collision integral """
+    _model = "table"
 
     def __init__(self, **kwargs):
         self._temps = kwargs["temps"]
@@ -399,8 +400,18 @@ class ColIntCurveFitModel(ColIntModel):
                                              self._cis,
                                              self._guess)
 
+    def _check_interp_bounds(self, temp):
+        if hasattr(self, "_temps"):
+            if temp < min(self._temps):
+                raise ValueError(f"Temperature ({temp}K) below curve fit range "
+                                 f" {min(self._temps)}-{max(self._temps)} K")
+            elif temp > max(self._temps):
+                raise ValueError(f"Temperature ({temp}K) above curve fit range "
+                                 f"{min(self._temps)}-{max(self._temps)} K")
+
     def eval(self, gas_state):
         temp = gas_state["temp"]
+        self._check_interp_bounds(temp)
         return self._curve_fit_form(temp, *self._coeffs)
 
     def __repr__(self):
