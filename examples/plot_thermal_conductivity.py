@@ -60,7 +60,7 @@ def plot_5_species_air_mixture():
     ax.set_ylim(bottom=0)
     ax.grid()
     ax.set_xlabel("Temperature [K]")
-    ax.set_ylabel(r"Thermal conductivity")
+    ax.set_ylabel(r"Thermal conductivity [$J/(m.s.K)$]")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     plt.savefig("./figs/air_thermal_conductivity.svg")
 
