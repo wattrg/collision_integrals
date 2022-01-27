@@ -10,6 +10,7 @@ from scipy import optimize, interpolate
 from scipy.special import factorial
 from scipy import integrate
 import numpy as np
+import sympy as sp
 from uncertainties import ufloat
 import matplotlib.pyplot as plt
 
@@ -17,6 +18,7 @@ from transprop.data.wright_ci_data import wright_ci_data
 from transprop.data.Laricchiuta import laricchiuta_coeffs
 from transprop.data.gupta_yos_data import gupta_yos_data
 from abc import ABC, abstractmethod
+
 
 
 class ColIntModel(ABC):
@@ -70,6 +72,9 @@ class ColIntModel(ABC):
         return self._model
 
     @abstractmethod
+    def _eval(self, gas_state):
+        raise NotImplementedError()
+
     def eval(self, gas_state):
         """
         Evaluate the collision integral
@@ -80,10 +85,20 @@ class ColIntModel(ABC):
         Returns:
             ci (float): The evaluated collision integral
         """
-        raise NotImplementedError
+        self._choose_math_package(gas_state)
+        return self._eval(gas_state)
 
 
-def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
+    def _choose_math_package(self, gas_state):
+        for gas_var in gas_state.values():
+            if isinstance(gas_var, sp.Expr):
+                self._math = sp
+                break
+            else:
+                self._math = np
+
+
+def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii, m=np):
     """
     The curve fit of collision integrals proposed by Gupta, Yos, Thomson (1990)
 
@@ -99,8 +114,8 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii):
                             using the parameters provided
        """
 
-    log_T = np.log(temp)
-    return np.exp(d_ii) * np.power(temp, a_ii*log_T**2 + b_ii*log_T + c_ii)
+    log_T = m.log(temp)
+    return m.exp(d_ii) * temp**(a_ii*log_T**2 + b_ii*log_T + c_ii)
 
 def psi(s):
     """ Compute Psi(s) """
@@ -113,12 +128,12 @@ def psi(s):
         return tmp
 
 
-def gamma_function(s):
+def gamma_function(s, m=np):
     """ Compute the gamma function for integer values of s """
     if s <= 2:
         return 1.0
     else:
-        return np.prod(np.arange(2, s))
+        return m.prod(self._math.arange(2, s))
 
 
 class MasonColInt(ColIntModel):
@@ -168,16 +183,16 @@ class MasonColInt(ColIntModel):
     def _debye_length(self, gas_state):
         temp = gas_state["temp"]
         ne = gas_state["ne"]
-        return np.sqrt(self._k_B * temp / (4 * np.pi * ne * self._e**2))
+        return self._math.sqrt(self._k_B * temp / (4 * np.pi * ne * self._e**2))
 
     def _temp_star(self, gas_state):
         temp = gas_state["temp"]
         return self._debye_length(gas_state) * self._k_B * temp / self._e**2
 
-    def eval(self, gas_state):
+    def _eval(self, gas_state):
         temp_star = self._temp_star(gas_state)
         debye = self._debye_length(gas_state)
-        log_term = np.log(self._Dn * temp_star * (1 - self._Cn*np.exp(-self._cn * temp_star))+1)
+        log_term = self._math.log(self._Dn * temp_star * (1 - self._Cn*np.exp(-self._cn * temp_star))+1)
         return 5e15 * (debye / temp_star)**2 * log_term
 
 
@@ -215,14 +230,14 @@ class GhoruiColInt(ColIntModel):
             tmp += species["charge"]**2 * species["num_den"]
         return pre_factor * tmp
 
-    def eval(self, gas_state):
+    def _eval(self, gas_state):
         self._temp_star = (mass[0] * temp[1] + mass[1] * temp[0]) / (mass[0] + mass[1])
-        delta = self._beta * (1/4/np.pi/self._epsilon
+        delta = self._beta * (1/4/self._math.pi/self._epsilon
                               * charge[0]*charge[1] * self._e**2 / self._k_B / self._temp_star)
         self._b_0 = delta / 2 / self._beta
-        pre_factor = np.sqrt(2 * np.pi * self._k_B * self._temp_star / self._m_star)
+        pre_factor = self._math.sqrt(2 * np.pi * self._k_B * self._temp_star / self._m_star)
         pre_factor *= self._beta**2 * self._b_0**2 * gamma_function(self._s)
-        log_Lambda = np.log(2 * self._compute_screening_distance / self._beta / self._b_0)
+        log_Lambda = self._math.log(2 * self._compute_screening_distance / self._beta / self._b_0)
         return pre_factor * (log_Lambda - self._l_term - 2 * self._gamma + psi(self._s))
 
 
@@ -335,17 +350,17 @@ class ColIntLaricchiuta(ColIntModel):
         """ Return a_i(beta) """
         return self._coeffs
 
-    def eval(self, gas_state):
+    def _eval(self, gas_state):
         temp = gas_state["temp"]
         temp_star = temp / self._epsilon
-        if np.any(temp_star < 2e-4) or np.any(temp_star > 1e3):
+        if self._math.any(temp_star < 2e-4) or np.any(temp_star > 1e3):
             raise ValueError("Temperature outside of valid range")
         a1, a2, a3, a4, a5, a6, a7 = self.get_coeffs()
-        x = np.log(temp_star)
+        x = self._math.log(temp_star)
         ln_omega = (a1 + a2*x) * \
-                    np.exp((x-a3)/a4) / (np.exp((x-a3)/a4) + np.exp((a3-x)/a4)) +\
-                    a5 * np.exp((x-a6)/a7) / (np.exp((x-a6)/a7) + np.exp((a6-x)/a7))
-        return np.exp(ln_omega) * (self._x_0 * self._sigma)**2
+                    self._math.exp((x-a3)/a4) / (np.exp((x-a3)/a4) + np.exp((a3-x)/a4)) +\
+                    a5 * self._math.exp((x-a6)/a7) / (np.exp((x-a6)/a7) + np.exp((a6-x)/a7))
+        return self._math.exp(ln_omega) * (self._x_0 * self._sigma)**2
 
 
 class ColIntTable(ColIntModel):
@@ -360,7 +375,7 @@ class ColIntTable(ColIntModel):
         self._eval_acc = kwargs.get("eval_acc", False)
         self._interp = interpolate.interp1d(self._temps, self._cis, kind=self._kind)
 
-    def eval(self, gas_state):
+    def _eval(self, gas_state):
         col_int = self._interp(gas_state["temp"])
         if self._eval_acc:
             if not self._acc:
@@ -395,6 +410,7 @@ class ColIntCurveFitModel(ColIntModel):
         pass
 
     def _evaluate_coeffs(self):
+        self._math = np
         self._coeffs, _ = optimize.curve_fit(self._curve_fit_form,
                                              self._temps,
                                              self._cis,
@@ -402,14 +418,14 @@ class ColIntCurveFitModel(ColIntModel):
 
     def _check_interp_bounds(self, temp):
         if hasattr(self, "_temps"):
-            if np.any(temp < min(self._temps)):
+            if self._math.any(temp < min(self._temps)):
                 raise ValueError(f"Temperature ({temp}K) below curve fit range "
                                  f" {min(self._temps)}-{max(self._temps)} K")
-            elif np.any(temp > max(self._temps)):
+            elif self._math.any(temp > max(self._temps)):
                 raise ValueError(f"Temperature ({temp}K) above curve fit range "
                                  f"{min(self._temps)}-{max(self._temps)} K")
 
-    def eval(self, gas_state):
+    def _eval(self, gas_state):
         temp = gas_state["temp"]
         self._check_interp_bounds(temp)
         return self._curve_fit_form(temp, *self._coeffs)
@@ -424,7 +440,7 @@ class ColIntGYCurveFitPiOmega(ColIntCurveFitModel):
     _model = "curve_fit_pi_omega"
 
     def _curve_fit_form(self, temp, a, b, c, d):
-        return omega_curve_fit(temp, a, b, c, d) / np.pi
+        return omega_curve_fit(temp, a, b, c, d, m=self._math) / self._math.pi
 
 
 class ColIntGYCurveFitOmega(ColIntCurveFitModel):
@@ -433,7 +449,7 @@ class ColIntGYCurveFitOmega(ColIntCurveFitModel):
     _model = "curve_fit_omega"
 
     def _curve_fit_form(self, temp, a, b, c, d):
-        return omega_curve_fit(temp, a, b, c, d)
+        return omega_curve_fit(temp, a, b, c, d, m=self._math)
 
 
 class ColIntWrightGYCurveFit(ColIntGYCurveFitOmega):
@@ -441,8 +457,8 @@ class ColIntWrightGYCurveFit(ColIntGYCurveFitOmega):
     Collision integrals from Wright et. al.
     """
 
-    def eval(self, gas_state):
-        col_int = super().eval(gas_state)
+    def _eval(self, gas_state):
+        col_int = super()._eval(gas_state)
         if self._eval_acc:
             col_int = ufloat(col_int, self._acc*col_int)
         return col_int
@@ -463,15 +479,15 @@ class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
                 raise KeyError(f"Couldn't find collision {species} in gupta yos data")
         super().__init__(**kwargs)
 
-    def eval(self, gas_state):
-        col_int = super().eval(gas_state)
+    def _eval(self, gas_state):
+        col_int = super()._eval(gas_state)
         if self._charge[0] * self._charge[1] != 0:
             # charged collision, so need to correct for electron pressure
             temp = gas_state["temp"]
             pe = gas_state["ep"]/101325
-            col_int *= np.log(2.09e-2 * (temp/1000/pe**0.25)**4
+            col_int *= self._math.log(2.09e-2 * (temp/1000/pe**0.25)**4
                                 + 1.52*(temp/1000/pe**0.25)**(8/3))
-            col_int /= np.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
+            col_int /= self._math.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
         return col_int
 
 

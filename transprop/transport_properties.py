@@ -7,7 +7,7 @@
 from .collision_integrals import collision_integral
 from transprop.data.gupta_yos_data import gupta_yos_data
 import numpy as np
-import uncertainties.unumpy as unp
+import sympy as sp
 from abc import ABC, abstractmethod
 
 AVOGADRO_NUMBER = 6.022e23
@@ -16,12 +16,28 @@ class TransProp(ABC):
     """ Base class for calculation of transport properties """
 
     @abstractmethod
-    def viscosity(self, gas_state):
+    def _viscosity(self, gas_state):
         raise NotImplementedError()
 
     @abstractmethod
-    def thermal_conductivity(self, gas_state):
+    def _thermal_conductivity(self, gas_state):
         raise NotImplementedError()
+
+    def viscosity(self, gas_state):
+        self._choose_math_package(gas_state)
+        return self._viscosity(gas_state)
+
+    def thermal_conductivity(self, gas_state):
+        self._choose_math_package(gas_state)
+        return self._thermal_conductivity(gas_state)
+
+    def _choose_math_package(self, gas_state):
+        for gas_var in gas_state.values():
+            if isinstance(gas_var, sp.Expr):
+                self._math = sp
+                break
+            else:
+                self._math = np
 
 
 class TwoTempTransProp(TransProp):
@@ -152,17 +168,17 @@ class TwoTempTransProp(TransProp):
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = (name_i, name_j)
                 # compute delta for this pair
-                tmp = factor*1.546e-20*np.sqrt(2.0*self._mu[pair]/(np.pi*1.987*T_ci))
-                deltas[pair] = tmp * np.pi * ci[pair].eval(gas_state)
+                tmp = factor*1.546e-20*self._math.sqrt(2.0*self._mu[pair]/(self._math.pi*1.987*T_ci))
+                deltas[pair] = tmp * self._math.pi * ci[pair].eval(gas_state)
                 # the pair written in the opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
         return deltas
 
-    def viscosity(self, gas_state):
+    def _viscosity(self, gas_state):
         """
         Compute the viscosity of a mixture in `gas_state`
         """
-        assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
+        # assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
         delta_22 = self._compute_delta(gas_state, (2, 2))
         sumA = 0.0
         for name_i in self._species_names:
@@ -179,11 +195,11 @@ class TwoTempTransProp(TransProp):
             sumA += self._particle_mass["e-"]*gas_state["molef"]["e-"]/denom
         return sumA * 1e-1 # g/(cm*s) -> kg/(m*s)
 
-    def thermal_conductivity(self, gas_state):
+    def _thermal_conductivity(self, gas_state):
         """
         Compute the thermal conductivity of a mixture in `gas_state`
         """
-        assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
+        # assert np.isclose(sum(gas_state["molef"].values()), 1), "mole fractions don't sum to one"
         delta_22 = self._compute_delta(gas_state, (2, 2))
         delta_11 = self._compute_delta(gas_state, (1, 1))
 
