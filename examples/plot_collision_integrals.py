@@ -2,7 +2,7 @@ from eilmer.gas import GasModel, GasState
 from transprop.collision_integrals import collision_integral, ColIntCurveFitCollection
 import matplotlib.pyplot as plt
 import numpy as np
-from data.wright_ci_data import wright_ci_data
+from transprop.data.wright_ci_data import wright_ci_data
 import matplotlib as mpl
 mpl.rcParams["text.usetex"] = True
 

@@ -13,9 +13,9 @@ import numpy as np
 from uncertainties import ufloat
 import matplotlib.pyplot as plt
 
-from data.wright_ci_data import wright_ci_data
-from data.Laricchiuta import laricchiuta_coeffs
-from data.gupta_yos_data import gupta_yos_data
+from transprop.data.wright_ci_data import wright_ci_data
+from transprop.data.Laricchiuta import laricchiuta_coeffs
+from transprop.data.gupta_yos_data import gupta_yos_data
 from abc import ABC, abstractmethod
 
 
