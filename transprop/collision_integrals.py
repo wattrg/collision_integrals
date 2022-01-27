@@ -402,10 +402,10 @@ class ColIntCurveFitModel(ColIntModel):
 
     def _check_interp_bounds(self, temp):
         if hasattr(self, "_temps"):
-            if temp < min(self._temps):
+            if np.any(temp < min(self._temps)):
                 raise ValueError(f"Temperature ({temp}K) below curve fit range "
                                  f" {min(self._temps)}-{max(self._temps)} K")
-            elif temp > max(self._temps):
+            elif np.any(temp > max(self._temps)):
                 raise ValueError(f"Temperature ({temp}K) above curve fit range "
                                  f"{min(self._temps)}-{max(self._temps)} K")
 
