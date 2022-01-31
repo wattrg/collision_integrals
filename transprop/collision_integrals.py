@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from transprop.data.wright_ci_data import wright_ci_data
 from transprop.data.Laricchiuta import laricchiuta_coeffs
 from transprop.data.gupta_yos_data import gupta_yos_data
+from transprop.data.very_viscous_gupta_yos import very_viscous_gupta_yos_data
 from abc import ABC, abstractmethod
 
 
@@ -471,10 +472,14 @@ class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
     def __init__(self, **kwargs):
         if "coeffs" not in kwargs:
             species = kwargs["species"]
-            if species in gupta_yos_data:
-                kwargs["coeffs"] = gupta_yos_data[species]
-            elif species[::-1] in gupta_yos_data:
-                kwargs["coeffs"] = gupta_yos_data[species[::-1]]
+            if kwargs["very-viscous"] == True:
+                gy_data = very_viscous_gupta_yos_data
+            else:
+                gy_data = gupta_yos_data
+            if species in gy_data:
+                kwargs["coeffs"] = gy_data[species]
+            elif species[::-1] in gy_data:
+                kwargs["coeffs"] = gy_data[species[::-1]]
             else:
                 raise KeyError(f"Couldn't find collision {species} in gupta yos data")
         super().__init__(**kwargs)
