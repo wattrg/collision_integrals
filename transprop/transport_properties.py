@@ -242,4 +242,4 @@ class TwoTempTransProp(TransProp):
             k_E = gas_state["molef"]["e-"]/denom
             k_E *= 2.3901e-8 * (15/4)*kB_erg
             k_E *= 4.184/1e-2
-        return k_tr + k_rot, [k_vib + k_E]
+        return k_tr + k_rot, k_vib + k_E
