@@ -474,6 +474,7 @@ class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
             species = kwargs["species"]
             if kwargs["very-viscous"] == True:
                 gy_data = very_viscous_gupta_yos_data
+                print("Using very viscous gupta-yos data")
             else:
                 gy_data = gupta_yos_data
             if species in gy_data:

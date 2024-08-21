@@ -6,7 +6,7 @@ air_5_species = {
         "epsilon": 97.53,
         "charge": 0,
         "polarisability": 1.71,
-        "N": 10,
+        "N": 12.8,
     },
     "O2": {
         "type": "molecule",
@@ -15,7 +15,7 @@ air_5_species = {
         "epsilon": 107.4,
         "charge": 0,
         "polarisability": 1.562,
-        "N": 12,
+        "N": 10.5,
     },
     "N": {
         "type": "atom",
@@ -37,7 +37,7 @@ air_5_species = {
     },
     "NO": {
         "type": "molecule",
-        "M": 3.0006e-2,
+        "M": 3.00061e-2,
         "sigma": 3.621,
         "epsilon": 97.53,
         "charge": 0,

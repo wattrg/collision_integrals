@@ -5,6 +5,6 @@ carbon_dioxide = {
         "sigma": 3.763,
         "epsilon": 244,
         "polarisability": 2.507,
-        "N": 12
+        "N": 14.02
     }
 }

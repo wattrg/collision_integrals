@@ -10,6 +10,8 @@ from ci_models import ci_models_laricchiuta, ci_models_wright, ci_models_laricch
 from gas_models.air_5_species import air_5_species
 from eilmer.gas import GasModel, GasState
 
+plt.rcParams["text.usetex"] = True
+plt.rcParams["font.serif"] = "Computer Modern"
 
 def plot_n2_viscosity():
     wright = TwoTempTransProp(nitrogen, {("N2", "N2"): ("wright_table", {"eval_acc": True})})
@@ -27,7 +29,7 @@ def plot_n2_viscosity():
         gupta_mus.append(gupta.viscosity(gas_state))
         laricchiuta_mus.append(laricchiuta.viscosity(gas_state))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(4,4))
     l, = ax.plot(temps, laricchiuta_mus, 'k')
     g, = ax.plot(temps, gupta_mus, 'k:')
     w, = ax.plot(temps, unp.nominal_values(wright_mus), 'k--')
@@ -39,10 +41,11 @@ def plot_n2_viscosity():
     ax.legend([l, g, (w, w_fill)], ["Laricchiuta", "Gupta, Yos, Thomson (Eilmer)", "Wright"])
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel("Viscosity [kg/m/s]")
-    ax.set_title("$N_2$ viscosity")
+    # ax.set_title("$N_2$ viscosity")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     ax.grid()
-    plt.savefig("./figs/N2_viscosity.svg")
+    fig.tight_layout()
+    plt.savefig("./figs/N2_viscosity.pgf")
 
 
 def plot_co2_viscosity():
@@ -72,7 +75,7 @@ def plot_co2_viscosity():
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
     ax.set_title("$CO_2$ viscosity")
     ax.grid()
-    plt.savefig("./figs/CO2_viscosity.svg")
+    plt.savefig("./figs/CO2_viscosity.pgf")
 
 def plot_5_species_air_mixture():
     gupta_trans_prop = TwoTempTransProp(air_5_species)
@@ -124,7 +127,7 @@ def plot_5_species_air_mixture():
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-    plt.savefig("./figs/air_viscosity.svg")
+    plt.savefig("./figs/air_viscosity.pgf")
 
 def plot_co2_n2_viscosity():
     wright_ci_models = {
@@ -164,11 +167,11 @@ def plot_co2_n2_viscosity():
     ax.set_xlabel("Temperature [K]")
     ax.set_ylabel(r"Viscosity $[kg/(m \cdot s)]$")
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0))
-    plt.savefig("./figs/co2_n2_viscosity.svg")
+    plt.savefig("./figs/co2_n2_viscosity.pgf")
 
 if __name__ == "__main__":
-    plot_n2_viscosity()
-    plot_co2_viscosity()
+    #plot_n2_viscosity()
+    #plot_co2_viscosity()
     plot_5_species_air_mixture()
     plot_co2_n2_viscosity()
     plt.show()

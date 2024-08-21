@@ -3,8 +3,9 @@ from transprop.collision_integrals import collision_integral, ColIntCurveFitColl
 import matplotlib.pyplot as plt
 import numpy as np
 from transprop.data.wright_ci_data import wright_ci_data
-import matplotlib as mpl
-mpl.rcParams["text.usetex"] = True
+
+plt.rcParams["text.usetex"] = True
+plt.rcParams["font.serif"] = "Computer Modern"
 
 
 def ci_comparison_n2():
@@ -12,7 +13,7 @@ def ci_comparison_n2():
     Compare the collision integrals as computed by Gupta Yos and Wright et. al.
     """
 
-    temps = np.linspace(300, 3000, 250)
+    temps = np.linspace(300, 10000, 250)
     gas_state = {"temp": temps}
 
     gupta_yos_n2_11 = collision_integral("gupta_yos", order=(1,1), curve_fit_type="pi_Omega",
@@ -23,23 +24,23 @@ def ci_comparison_n2():
                                          coeffs=[0.0, -0.0203, 0.0683, 4.09],
                                          species=("N2", "N2"))
     wright_et_al_n2_22 = collision_integral("wright_table", order=(2,2), species=("N2", "N2"))
-    laricchiuta_n2_n2_11 = collision_integral("laricchiuta", order=(1,1), alpha=1.71, N=8,
+    laricchiuta_n2_n2_11 = collision_integral("laricchiuta", order=(1,1), alpha=1.71, N=11.8,
                                               species=("N2", "N2"))
-    laricchiuta_n2_n2_22 = collision_integral("laricchiuta", order=(2,2), alpha=1.71, N=8,
+    laricchiuta_n2_n2_22 = collision_integral("laricchiuta", order=(2,2), alpha=1.71, N=11.8,
                                               species=("N2", "N2"))
 
     wright_n2_n2_eval = wright_et_al_n2_11.eval(gas_state)
-    fig, ax = plt.subplots(2, 1, sharex=True)
-    fig.suptitle("$N_2 - N_2 $ collision integrals")
-    ax[0].plot(temps, laricchiuta_n2_n2_11.eval(gas_state), 'k', label="Laricchiuta")
-    ax[0].plot(temps, gupta_yos_n2_11.eval(gas_state), 'k:', label="Gupta et al (Eilmer)")
-    ax[0].plot(temps, wright_n2_n2_eval, 'k--', label="Wright et al")
-    ax[0].fill_between(temps,
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(4,4))
+    # fig.suptitle("$N_2 - N_2 $ collision integrals")
+    l,=ax[0].plot(temps, laricchiuta_n2_n2_11.eval(gas_state), 'k', label="Laricchiuta")
+    g,=ax[0].plot(temps, gupta_yos_n2_11.eval(gas_state), 'k:', label="Gupta et al (Eilmer)")
+    w,=ax[0].plot(temps, wright_n2_n2_eval, 'k--', label="Wright et al")
+    w_fill=ax[0].fill_between(temps,
                        wright_n2_n2_eval - wright_n2_n2_eval*0.1,
                        wright_n2_n2_eval + wright_n2_n2_eval*0.1, alpha=0.5,
                        label="Wright et al uncertainty")
     ax[0].set_ylabel("$\\Omega^{(1,1)}$, $\\AA^2$")
-    ax[0].legend()
+    fig.legend([l,g, (w,w_fill)], ["Laricchiuta", "Gupta, Yos, Thomson", "Wright"])
     ax[0].set_ylim(bottom=0)
     ax[0].grid()
     wright_eval = wright_et_al_n2_22.eval(gas_state)
@@ -51,7 +52,8 @@ def ci_comparison_n2():
     ax[1].set_xlabel("Temperature, K")
     ax[1].set_ylim(bottom=0)
     ax[1].grid()
-    fig.savefig("./figs/N2_N2_comparison.svg")
+    fig.tight_layout()
+    fig.savefig("./figs/N2_N2_comparison.pgf")
 
 def ci_comparison_co2():
     temps = np.linspace(300, 3000, 250)
@@ -188,9 +190,9 @@ def plot_curve_fit_data():
 
 
 if __name__ == "__main__":
-    plot_curve_fit_data()
-    ci_comparison_co2()
+    #plot_curve_fit_data()
+    #ci_comparison_co2()
     ci_comparison_n2()
-    plot_N2p_N2p_interaction()
+    #plot_N2p_N2p_interaction()
 
     plt.show()

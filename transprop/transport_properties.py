@@ -6,6 +6,7 @@
 
 from .collision_integrals import collision_integral
 from transprop.data.gupta_yos_data import gupta_yos_data
+from transprop.data.very_viscous_gupta_yos import very_viscous_gupta_yos_data
 import numpy as np
 import sympy as sp
 from abc import ABC, abstractmethod
@@ -90,18 +91,24 @@ class TwoTempTransProp(TransProp):
                 self._mu[pair[::-1]] = self._mu[pair]
 
                 # compute alpha
-                M_ratio = gas_model[name_i]["M"]/gas_model[name_j]["M"]
+                M_ratio = np.array([gas_model[name_i]["M"]/gas_model[name_j]["M"],
+                                    gas_model[name_j]["M"]/gas_model[name_i]["M"]])
                 denom = (1 + M_ratio)**2
                 numer = (1 - M_ratio) * (0.45 - 2.54*M_ratio)
-                self._alpha[name_i, name_j] = 1 + numer/denom
-                self._alpha[name_j, name_i] = self._alpha[name_i, name_j]
+                alphas = 1 + numer/denom
+                self._alpha[name_i, name_j] = alphas[0]
+                self._alpha[name_j, name_i] = alphas[1]
 
     def _get_col_int_parameters(self, ci_model, pair, order, user_params):
         params = {"order": order, "species": pair}
         if ci_model == "gupta_yos":
-            if pair not in gupta_yos_data:
+            if user_params.get("very-viscous"):
+                gy_data = very_viscous_gupta_yos_data
+            else:
+                gy_data = gupta_yos_data
+            if pair not in gy_data:
                 pair = pair[::-1]
-            params["coeffs"] = gupta_yos_data[pair][order]
+            params["coeffs"] = gy_data[pair][order]
         elif ci_model == "laricchiuta":
             sigma_a = self._gas_model[pair[0]].get("sigma", None)
             sigma_b = self._gas_model[pair[1]].get("sigma", None)
@@ -165,11 +172,13 @@ class TwoTempTransProp(TransProp):
                 T_ci = gas_state["T_modes"][0]
             else:
                 T_ci = gas_state["temp"]
+            gs = gas_state.copy()
+            gs["temp"] = T_ci
             for name_j in self._species_names[self._species_names.index(name_i):]:
                 pair = (name_i, name_j)
                 # compute delta for this pair
                 tmp = factor*1.546e-20*self._math.sqrt(2.0*self._mu[pair]/(self._math.pi*1.987*T_ci))
-                deltas[pair] = tmp * self._math.pi * ci[pair].eval(gas_state)
+                deltas[pair] = tmp * self._math.pi * ci[pair].eval(gs)
                 # the pair written in the opposite order is the same
                 deltas[pair[::-1]] = deltas[pair]
         return deltas
@@ -215,7 +224,7 @@ class TwoTempTransProp(TransProp):
             if name_i == "e-": continue
             sumA += gas_state["molef"][name_i]/denom
         kB_erg = 1.38066e-16
-        k_tr = 2.3901e-8*(15/4)*kB_erg*sumA
+        k_tr = 2.3901e-8*(15.0/4.0)*kB_erg*sumA
         k_tr *= 4.184/1e-2
 
         # 2. k_rot
@@ -229,6 +238,7 @@ class TwoTempTransProp(TransProp):
                 k_rot += gas_state["molef"][name_i]/denom
         k_rot *= 2.3901e-8*kB_erg
         k_rot *= 4.184/1e-2
+        k = k_tr + k_rot
 
         # 3. k_vib = k_rot
         k_vib = k_rot
@@ -240,6 +250,6 @@ class TwoTempTransProp(TransProp):
             for name_j in self._species_names:
                 denom += 1.45*gas_state["molef"][name_j]*delta_22["e-", name_j]
             k_E = gas_state["molef"]["e-"]/denom
-            k_E *= 2.3901e-8 * (15/4)*kB_erg
+            k_E *= 2.3901e-8 * (15.0/4)*kB_erg
             k_E *= 4.184/1e-2
-        return k_tr + k_rot, k_vib + k_E
+        return k, k_vib + k_E
