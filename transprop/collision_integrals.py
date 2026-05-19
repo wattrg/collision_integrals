@@ -21,9 +21,9 @@ from transprop.data.very_viscous_gupta_yos import very_viscous_gupta_yos_data
 from abc import ABC, abstractmethod
 
 
-
 class ColIntModel(ABC):
-    """ Base class for collision integral models """
+    """Base class for collision integral models"""
+
     def __init__(self, **kwargs):
         # get the order of the collision integral
         try:
@@ -57,19 +57,19 @@ class ColIntModel(ABC):
             self._eval_acc = False
 
     def get_charge(self):
-        """ Return the charge of the species """
+        """Return the charge of the species"""
         return tuple(self._charge)
 
     def get_order(self):
-        """ Return the order of the collision integral """
+        """Return the order of the collision integral"""
         return self._l, self._s
 
     def get_species(self):
-        """ Return the species in the collision integral """
+        """Return the species in the collision integral"""
         return self._species
 
     def get_model(self):
-        """ Return the model of the collision integral """
+        """Return the model of the collision integral"""
         return self._model
 
     @abstractmethod
@@ -88,7 +88,6 @@ class ColIntModel(ABC):
         """
         self._choose_math_package(gas_state)
         return self._eval(gas_state)
-
 
     def _choose_math_package(self, gas_state):
         for gas_var in gas_state.values():
@@ -113,24 +112,25 @@ def omega_curve_fit(temp, a_ii, b_ii, c_ii, d_ii, m=np):
     Returns:
        pi_omega_ii (float): The estimated value of pi_omega_ii
                             using the parameters provided
-       """
+    """
 
     log_T = m.log(temp)
-    return m.exp(d_ii) * temp**(a_ii*log_T**2 + b_ii*log_T + c_ii)
+    return m.exp(d_ii) * temp ** (a_ii * log_T**2 + b_ii * log_T + c_ii)
+
 
 def psi(s):
-    """ Compute Psi(s) """
+    """Compute Psi(s)"""
     if s == 1:
         return 0.0
     else:
         tmp = 0
         for n in range(1, s):
-            tmp += 1/n
+            tmp += 1 / n
         return tmp
 
 
 def gamma_function(s, m=np):
-    """ Compute the gamma function for integer values of s """
+    """Compute the gamma function for integer values of s"""
     if s <= 2:
         return 1.0
     else:
@@ -148,8 +148,8 @@ class MasonColInt(ColIntModel):
 
     # electron charge and Bolzmann's constant are in these units
     # to match the values given by Mason
-    _e = 4.803e-10 # electron charge (esu)
-    _k_B = 1.3806e-16 # Boltzmann's constant (erg/K)
+    _e = 4.803e-10  # electron charge (esu)
+    _k_B = 1.3806e-16  # Boltzmann's constant (erg/K)
 
     def __init__(self, **kwargs):
         if "model" not in kwargs:
@@ -193,8 +193,10 @@ class MasonColInt(ColIntModel):
     def _eval(self, gas_state):
         temp_star = self._temp_star(gas_state)
         debye = self._debye_length(gas_state)
-        log_term = self._math.log(self._Dn * temp_star * (1 - self._Cn*np.exp(-self._cn * temp_star))+1)
-        return 5e15 * (debye / temp_star)**2 * log_term
+        log_term = self._math.log(
+            self._Dn * temp_star * (1 - self._Cn * np.exp(-self._cn * temp_star)) + 1
+        )
+        return 5e15 * (debye / temp_star) ** 2 * log_term
 
 
 class GhoruiColInt(ColIntModel):
@@ -224,21 +226,34 @@ class GhoruiColInt(ColIntModel):
         self._m_star = mass[0] * mass[1] / (mass[0] + mass[1])
 
     def _compute_screening_distance(self, gas_state):
-        """ Calculate the screening distance """
+        """Calculate the screening distance"""
         pre_factor = self._e**2 / self._epsilon_0 / self._k_B / gas_state["Te"]
         tmp = gas_state["ne"]
         for species in gas_state.items():
-            tmp += species["charge"]**2 * species["num_den"]
+            tmp += species["charge"] ** 2 * species["num_den"]
         return pre_factor * tmp
 
     def _eval(self, gas_state):
         self._temp_star = (mass[0] * temp[1] + mass[1] * temp[0]) / (mass[0] + mass[1])
-        delta = self._beta * (1/4/self._math.pi/self._epsilon
-                              * charge[0]*charge[1] * self._e**2 / self._k_B / self._temp_star)
+        delta = self._beta * (
+            1
+            / 4
+            / self._math.pi
+            / self._epsilon
+            * charge[0]
+            * charge[1]
+            * self._e**2
+            / self._k_B
+            / self._temp_star
+        )
         self._b_0 = delta / 2 / self._beta
-        pre_factor = self._math.sqrt(2 * np.pi * self._k_B * self._temp_star / self._m_star)
+        pre_factor = self._math.sqrt(
+            2 * np.pi * self._k_B * self._temp_star / self._m_star
+        )
         pre_factor *= self._beta**2 * self._b_0**2 * gamma_function(self._s)
-        log_Lambda = self._math.log(2 * self._compute_screening_distance / self._beta / self._b_0)
+        log_Lambda = self._math.log(
+            2 * self._compute_screening_distance / self._beta / self._b_0
+        )
         return pre_factor * (log_Lambda - self._l_term - 2 * self._gamma + psi(self._s))
 
 
@@ -267,7 +282,7 @@ class ColIntLaricchiuta(ColIntModel):
             raise Exception("Invalid collision type for Laricchiuta integrals")
 
         # physical parameters
-        param_priority = kwargs.get("param_priority", "LJ")
+        param_priority = kwargs.get("param_priority", "polarisability")
         if param_priority == "LJ":
             if not self._get_sigma_epsilon(kwargs):
                 if not self._get_alphas(kwargs):
@@ -296,6 +311,27 @@ class ColIntLaricchiuta(ColIntModel):
             self._coeffs.append(coeff)
 
     def _get_sigma_epsilon(self, kwargs):
+        # first try to get info from a database passed
+        # to the constructor
+        if "database" in kwargs:
+            database = kwargs["database"]
+            species_a = kwargs["species"][0]
+            species_b = kwargs["species"][1]
+            sigma_a = database[species_a].get("sigma", None)
+            sigma_b = database[species_b].get("sigma", None)
+            if sigma_a is None or sigma_b is None:
+                return False
+            epsilon_a = database[species_a].get("epsilon", None)
+            epsilon_b = database[species_b].get("epsilon", None)
+            if epsilon_a is None or epsilon_b is None:
+                return False
+            self._sigma = 0.5 * (sigma_a + sigma_b)
+            self._epsilon = np.sqrt(epsilon_a * epsilon_b)
+            self._beta = kwargs.get("beta", 8)
+            return True
+
+        # if no database was passed, check for parameters
+        # passed directly as kwargs
         try:
             self._sigma = kwargs["sigma"]
             self._epsilon = kwargs["epsilon"]
@@ -305,6 +341,27 @@ class ColIntLaricchiuta(ColIntModel):
             return False
 
     def _get_alphas(self, kwargs):
+        # first try to get info from a database passed
+        # to the constructor
+        if "database" in kwargs:
+            database = kwargs["database"]
+            species_a = kwargs["species"][0]
+            species_b = kwargs["species"][1]
+            alpha_a = database[species_a].get("polarisability", None)
+            alpha_b = database[species_b].get("polarisability", None)
+            if alpha_a is None or alpha_b is None:
+                return False
+            self._alphas = np.array([alpha_a, alpha_b])
+            N_a = database[species_a].get("N", None)
+            N_b = database[species_b].get("N", None)
+            if N_a is None or N_b is None:
+                return False
+            self._Ns = np.array([N_a, N_b])
+            self._compute_parameters()
+            return True
+
+        # if no database was passed, check for parameters
+        # passed directly as kwargs
         try:
             self._alphas = kwargs["alphas"]
             self._Ns = kwargs["Ns"]
@@ -314,6 +371,23 @@ class ColIntLaricchiuta(ColIntModel):
             return False
 
     def _get_alpha(self, kwargs):
+        if "database" in kwargs:
+            database = kwargs["database"]
+            species_a = kwargs["species"][0]
+            species_b = kwargs["species"][1]
+            alpha_a = database[species_a].get("polarisability", None)
+            alpha_b = database[species_b].get("polarisability", None)
+            if alpha_a is None or alpha_b is None:
+                return False
+            self._alphas = np.array([alpha_a, alpha_b])
+            N_a = database[species_a].get("N", None)
+            N_b = database[species_b].get("N", None)
+            if N_a is None or N_b is None:
+                return False
+            self._Ns = np.array([N_a, N_b])
+            self._compute_parameters()
+            return True
+
         try:
             alpha = kwargs["alpha"]
             N = kwargs["N"]
@@ -325,30 +399,31 @@ class ColIntLaricchiuta(ColIntModel):
             return False
 
     def get_col_type(self):
-        """ Return type of collision """
+        """Return type of collision"""
         return self._col_type
 
     def _compute_parameters(self):
-        """ Compute epsilon_0, r_e, and beta """
+        """Compute epsilon_0, r_e, and beta"""
 
         alphas = np.array(self._alphas)
         Ns = np.array(self._Ns)
         softness = np.cbrt(alphas)
-        self._beta = 6 + 5 / ( np.sum(softness) )
+        self._beta = 6 + 5 / (np.sum(softness))
         col_type = self.get_col_type()
 
         if col_type == "neutral-neutral":
-            self._sigma = 1.767 * np.sum(softness) / ( np.prod(alphas)**0.095 )
-            c_d = 15.7 * np.prod(alphas) / np.sum( np.sqrt(alphas/Ns ))
+            self._sigma = 1.767 * np.sum(softness) / (np.prod(alphas) ** 0.095)
+            c_d = 15.7 * np.prod(alphas) / np.sum(np.sqrt(alphas / Ns))
             # compute epsilon in eV, and convert to K
             self._epsilon = 0.72 * c_d / self._sigma**6 * 11604.525
 
         elif col_type == "ion-netrual":
-            raise NotImplementedError("calculating parameters for ion-neutral "
-                                      "collisions not implemented yet")
+            raise NotImplementedError(
+                "calculating parameters for ion-neutral collisions not implemented yet"
+            )
 
     def get_coeffs(self):
-        """ Return a_i(beta) """
+        """Return a_i(beta)"""
         return self._coeffs
 
     def _eval(self, gas_state):
@@ -358,14 +433,17 @@ class ColIntLaricchiuta(ColIntModel):
             raise ValueError("Temperature outside of valid range")
         a1, a2, a3, a4, a5, a6, a7 = self.get_coeffs()
         x = self._math.log(temp_star)
-        ln_omega = (a1 + a2*x) * \
-                    self._math.exp((x-a3)/a4) / (np.exp((x-a3)/a4) + np.exp((a3-x)/a4)) +\
-                    a5 * self._math.exp((x-a6)/a7) / (np.exp((x-a6)/a7) + np.exp((a6-x)/a7))
-        return self._math.exp(ln_omega) * (self._x_0 * self._sigma)**2
+        ln_omega = (a1 + a2 * x) * self._math.exp((x - a3) / a4) / (
+            np.exp((x - a3) / a4) + np.exp((a3 - x) / a4)
+        ) + a5 * self._math.exp((x - a6) / a7) / (
+            np.exp((x - a6) / a7) + np.exp((a6 - x) / a7)
+        )
+        return self._math.exp(ln_omega) * (self._x_0 * self._sigma) ** 2
 
 
 class ColIntTable(ColIntModel):
-    """ Tabulated collision integral """
+    """Tabulated collision integral"""
+
     _model = "table"
 
     def __init__(self, **kwargs):
@@ -380,13 +458,15 @@ class ColIntTable(ColIntModel):
         col_int = self._interp(gas_state["temp"])
         if self._eval_acc:
             if not self._acc:
-                raise ValueError("Accuracy not specified for tabular collision integral")
+                raise ValueError(
+                    "Accuracy not specified for tabular collision integral"
+                )
             col_int = ufloat(col_int, self._acc * col_int)
         return col_int
 
 
 class ColIntCurveFitModel(ColIntModel):
-    """ Base class for curve fitted collision integrals"""
+    """Base class for curve fitted collision integrals"""
 
     def __init__(self, **kwargs):
         if "model" not in kwargs:
@@ -403,8 +483,10 @@ class ColIntCurveFitModel(ColIntModel):
         elif "coeffs" in kwargs:
             self._coeffs = kwargs["coeffs"]
         else:
-            raise ValueError("Curve fit model must be provide tabulated "
-                             "collision integrals or coefficients")
+            raise ValueError(
+                "Curve fit model must be provide tabulated "
+                "collision integrals or coefficients"
+            )
 
     @abstractmethod
     def _curve_fit_form(self, temp, *args):
@@ -412,19 +494,22 @@ class ColIntCurveFitModel(ColIntModel):
 
     def _evaluate_coeffs(self):
         self._math = np
-        self._coeffs, _ = optimize.curve_fit(self._curve_fit_form,
-                                             self._temps,
-                                             self._cis,
-                                             self._guess)
+        self._coeffs, _ = optimize.curve_fit(
+            self._curve_fit_form, self._temps, self._cis, self._guess
+        )
 
     def _check_interp_bounds(self, temp):
         if hasattr(self, "_temps"):
             if self._math.any(temp < min(self._temps)):
-                raise ValueError(f"Temperature ({temp}K) below curve fit range "
-                                 f" {min(self._temps)}-{max(self._temps)} K")
+                raise ValueError(
+                    f"Temperature ({temp}K) below curve fit range "
+                    f" {min(self._temps)}-{max(self._temps)} K"
+                )
             elif self._math.any(temp > max(self._temps)):
-                raise ValueError(f"Temperature ({temp}K) above curve fit range "
-                                 f"{min(self._temps)}-{max(self._temps)} K")
+                raise ValueError(
+                    f"Temperature ({temp}K) above curve fit range "
+                    f"{min(self._temps)}-{max(self._temps)} K"
+                )
 
     def _eval(self, gas_state):
         temp = gas_state["temp"]
@@ -436,7 +521,8 @@ class ColIntCurveFitModel(ColIntModel):
 
 
 class ColIntGYCurveFitPiOmega(ColIntCurveFitModel):
-    """ Curve fit of pi * Omega """
+    """Curve fit of pi * Omega"""
+
     _guess = [-0.01, 0.3, -2.5, 11]
     _model = "curve_fit_pi_omega"
 
@@ -445,7 +531,8 @@ class ColIntGYCurveFitPiOmega(ColIntCurveFitModel):
 
 
 class ColIntGYCurveFitOmega(ColIntCurveFitModel):
-    """ Curve fitted collision integral """
+    """Curve fitted collision integral"""
+
     _guess = [-0.01, 0.3, -2.5, 11]
     _model = "curve_fit_omega"
 
@@ -461,8 +548,9 @@ class ColIntWrightGYCurveFit(ColIntGYCurveFitOmega):
     def _eval(self, gas_state):
         col_int = super()._eval(gas_state)
         if self._eval_acc:
-            col_int = ufloat(col_int, self._acc*col_int)
+            col_int = ufloat(col_int, self._acc * col_int)
         return col_int
+
 
 class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
     """
@@ -490,10 +578,14 @@ class ColIntGuptaYos(ColIntGYCurveFitPiOmega):
         if self._charge[0] * self._charge[1] != 0:
             # charged collision, so need to correct for electron pressure
             temp = gas_state["temp"]
-            pe = gas_state["ep"]/101325
-            col_int *= self._math.log(2.09e-2 * (temp/1000/pe**0.25)**4
-                                + 1.52*(temp/1000/pe**0.25)**(8/3))
-            col_int /= self._math.log(2.09e-2 * (temp/1000)**4 + 1.52*(temp/1000)**(8/3))
+            pe = gas_state["ep"] / 101325
+            col_int *= self._math.log(
+                2.09e-2 * (temp / 1000 / pe**0.25) ** 4
+                + 1.52 * (temp / 1000 / pe**0.25) ** (8 / 3)
+            )
+            col_int /= self._math.log(
+                2.09e-2 * (temp / 1000) ** 4 + 1.52 * (temp / 1000) ** (8 / 3)
+            )
         return col_int
 
 
@@ -518,31 +610,34 @@ class ColIntCurveFitCollection:
                 if "-" in pair[i]:
                     charge[i] = -1
 
-            for order in [(1,1), (2,2)]:
+            for order in [(1, 1), (2, 2)]:
                 self._ci_coeffs[pair][order] = _col_int_curve_fit(
                     curve_fit_type=self._curve_fit_type,
                     order=order,
                     temps=pair_ci[order]["temps"],
                     cis=pair_ci[order]["cis"],
                     charge=charge,
-                    species=species
+                    species=species,
                 )
 
     def get_col_ints(self, pair=None, ci_type=None):
-        """ Return the collision integrals """
+        """Return the collision integrals"""
         if pair:
             if ci_type:
                 return self._ci_coeffs[pair][ci_type]
             return self._ci_coeffs[pair]
         return self._ci_coeffs
 
+
 def _col_int_wright_table(**kwargs):
-    """ Create a collision integral from Wright et al """
+    """Create a collision integral from Wright et al"""
     try:
         species = kwargs["species"]
         order = kwargs["order"]
     except KeyError:
-        raise KeyError("You must supply the species and order for Wright collision integrals")
+        raise KeyError(
+            "You must supply the species and order for Wright collision integrals"
+        )
 
     if species in wright_ci_data:
         data = wright_ci_data[species][order]
@@ -565,7 +660,9 @@ def _col_int_wright_gy_curve_fit(**kwargs):
         species = kwargs["species"]
         order = kwargs["order"]
     except KeyError:
-        raise KeyError("You must supply the species and order for Wright collision integrals")
+        raise KeyError(
+            "You must supply the species and order for Wright collision integrals"
+        )
 
     if species in wright_ci_data:
         data = wright_ci_data[species][order]
@@ -578,6 +675,7 @@ def _col_int_wright_gy_curve_fit(**kwargs):
     kwargs["acc"] = data["acc"]
     kwargs["curve_fit_type"] = "Omega"
     return ColIntWrightGYCurveFit(**kwargs)
+
 
 def _col_int_curve_fit(**kwargs):
     """
@@ -592,6 +690,7 @@ def _col_int_curve_fit(**kwargs):
     if curve_fit_type not in CURVE_FIT_TYPES:
         raise ValueError(curve_fit_type)
     return CURVE_FIT_TYPES[curve_fit_type](**kwargs)
+
 
 def collision_integral(ci_type, **kwargs):
     """
@@ -622,37 +721,30 @@ def collision_integral(ci_type, **kwargs):
 if __name__ == "__main__":
     gas_state = {"ne": 1e20, "temp": 1000}
     ci = collision_integral(
-        "mason",
-        order=(1, 1),
-        charge=(-1, -1),
-        species=("NA", "NA")
+        "mason", order=(1, 1), charge=(-1, -1), species=("NA", "NA")
     )
     print("collision integral = ", ci.eval(gas_state))
     print("temp star = ", ci._temp_star(gas_state))
     print("debye length = ", ci._debye_length(gas_state))
-    print("temp star square * ci = ", ci.eval(gas_state) * ci._temp_star(gas_state)**2)
+    print(
+        "temp star square * ci = ", ci.eval(gas_state) * ci._temp_star(gas_state) ** 2
+    )
 
     ci = collision_integral(
         "gupta_yos",
-        order=(1,1),
-        charge=(0,0),
+        order=(1, 1),
+        charge=(0, 0),
         species=("N2", "N2"),
-        coeffs=[0.0, -0.0112, -0.1182, 4.8464]
+        coeffs=[0.0, -0.0112, -0.1182, 4.8464],
     )
     gas_state = {"temp": 1000}
     print(ci.eval(gas_state))
 
     ci = collision_integral(
-        "wright_curve_fit",
-        order=(1,1),
-        species=("N2", "N2"),
-        eval_acc=True
+        "wright_curve_fit", order=(1, 1), species=("N2", "N2"), eval_acc=True
     )
     ci_table = collision_integral(
-        "wright_table",
-        order=(1,1),
-        species=("N2", "N2"),
-        eval_acc=True
+        "wright_table", order=(1, 1), species=("N2", "N2"), eval_acc=True
     )
     print(ci.eval(gas_state))
     print(ci_table.eval(gas_state))
